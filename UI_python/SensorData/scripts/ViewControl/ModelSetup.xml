@@ -1,0 +1,18 @@
+<item>
+  <TrackingObject>
+    <Name>NDIBall</Name>
+    <TargetName>SingleNDIBall</TargetName>
+    <InitiateStatus>1</InitiateStatus>
+    <InitiatePosition><x>0</x><y>0</y><z>0.6</z></InitiatePosition>
+
+    <RegistrationSetUp>
+      <MarkerBallInSlicer>
+        <Point1>[55.3597,70.109,-1195.98]</Point1>
+        <Point2>[27.8503,74.11,-1199.35]</Point2>
+        <Point3>[26.0964,79.4331,-1171.93]</Point3>
+        <Point4>[53.0059,75.4569,-1168.7]</Point4>
+      </MarkerBallInSlicer>
+      <TrackerOnModel>Object1</TrackerOnModel>
+    </RegistrationSetUp>
+  </TrackingObject>
+</item>
