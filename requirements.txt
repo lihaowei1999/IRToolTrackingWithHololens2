@@ -1,0 +1,10 @@
+numpy
+scikit-surgerynditracker
+scipy
+tqdm
+pyquaternion
+opencv-python-headless
+autolab_core
+PyQt5
+filterpy
+pyigtl

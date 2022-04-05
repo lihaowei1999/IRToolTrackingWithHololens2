@@ -3,3 +3,11 @@
 
 # Ada Library Information
 *.ali
+
+UI_python/__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
