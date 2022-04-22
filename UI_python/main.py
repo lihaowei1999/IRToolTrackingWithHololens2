@@ -1,4 +1,3 @@
-#from _typeshed import NoneType
 import logging
 import sys
 import os
@@ -8,7 +7,6 @@ from types import FrameType
 from typing import Final
 from numpy.core.defchararray import lower
 from numpy.core.numeric import NaN
-# import qwt
 from My_classes import *
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal, QMutex, QMutexLocker
@@ -34,28 +32,19 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(MainDialog, self).__init__()
         self.setupUi(self)
-        
+
+        ## Setup Logger
         self.initLogger()
-        
-        self.simple_test=1
-        self.version='run'
-        self.Hololens_pos=[]
-        self.tracker_pos=[]
-        
-        self._is_tracking = False
+
 
         self.setWindowFlag(QtCore.Qt.WindowMinMaxButtonsHint)
         self.logger.info(f'System started.')
         
+        ## Variant for sensor datas
         self.down_limit_ab=128
         self.up_limit_ab=512
-        
-        self._is_getting_image=False
-        self._is_transforming_Data=False
-        self._is_displaying=False
         self._mx=10
         self._mx_vlc=10
-
         self.RawAHATQueue=queue.Queue(maxsize=self._mx)
         self.AHATQueue=queue.Queue(maxsize=self._mx)
         self.LFRawQueue=queue.Queue(maxsize=self._mx_vlc)
@@ -67,39 +56,28 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.RRRawQueue=queue.Queue(maxsize=self._mx_vlc)
         self.RRImQueue=queue.Queue(maxsize=self._mx_vlc)
         self.AHATForCalFrame=queue.Queue(maxsize=self._mx_vlc)
-    
         self.RR_isworking=False
         self.RF_isworking=False
         self.LF_isworking=False
         self.LL_isworking=False
         self.AHAT_isworking=False
         
-        self._workingDirect="/home/lihaowei/Documents/Git/HololensWorkingUI/UI/SensorData/Cache"
-        self._DirectMutex=QMutex()
+        
         
         self.AHATDisplayFrame=queue.Queue(maxsize=1)
         self.RRDisplayFrame=queue.Queue(maxsize=1)
-        
-        
         self.RFDisplayFrame=queue.Queue(maxsize=1)
         self.LLDisplayFrame=queue.Queue(maxsize=1)
         self.LFDisplayFrame=queue.Queue(maxsize=1)
         self.SnapShotFrame=queue.Queue(maxsize=1)
         
-        self._isTakingVideo=False
 
-        self.CumulativeFramePhoto=[]
         
         self._isTrackingTool=False
         
         self._isDisplaying3Dinformation=False
         
-        self._isDisplaySnapShotInfomation=False
-        
-        self._CalibrationDataStorage=[]
-        
-        self._CalibrationNDIData=[]
-        
+
         self.igtDisplayStatus=False
         self.igtlClient=None
 
@@ -108,11 +86,10 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self._isRecordingAHATDATA=False
         self._isProvidingAHATDATA=False
 
-
+        self._workingDirect="Cache/"
         self.RootPath="Cache/"
         self.defaultRecordingPath="Cache/AHATRecordData.npy"
         self.defaultRecordingTrackingData="Cache/AHATTrackingRecordData.npy"
-
 
         self._iscollectingTrackingData=False
         self._collectedTrakingData=[]
@@ -452,19 +429,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.logger.info("NDI Connected")
         
         
-    # require a list input
-    def SnapShotProviding(self):        
-        if not self._isDisplaySnapShotInfomation:
-            self._isDisplaySnapShotInfomation=True
-            self.StartSnapshotButton.setText("Stop")
-            self.SnapShotDisplayThread=AHATCalibrationInput(self.logger,self.AHATDisplayFrame)
-            self.SnapShotDisplayThread.SignalCalibrationInput.connect(self.DealSnapShotInfomation)
-            self.SnapShotDisplayThread.start()
-        else:
-            self._isDisplaySnapShotInfomation=False
-            self.SnapShotDisplayThread.stop()
-            self._isDisplaySnapShotInfomation=None
-            self.StartSnapshotButton.setText("Start SnapShot")
+
             
         
         
@@ -474,14 +439,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             _=self.SnapShotFrame.get()
         self.SnapShotFrame.put(_info)
     
-    def TakeCalibrationData(self):
-        if not self.SnapShotFrame.empty():
-            _cur=self.SnapShotFrame.get()
-        self._CalibrationDataStorage.append(_cur)
-        _curndi=self.tracker.fetch()
-        print(_curndi)
-        self._CalibrationNDIData.append(_curndi)
-        print(len(self._CalibrationDataStorage))
+
 
         
 
@@ -545,18 +503,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.igtDisplayStatus=status
 
 
-    def OnToolPreviewButtonClicked(self):
-        if not self._isDisplaySnapShotInfomation:
-            self._isDisplaySnapShotInfomation=True
-            self.ToolDefPreviewButton.setText("Stop")
-            self.SnapShotDisplayThread=AHATCalibrationInput(self.logger,self.AHATDisplayFrame)
-            self.SnapShotDisplayThread.SignalCalibrationInput.connect(self.OnCollectToolDefSingleFrame)
-            self.SnapShotDisplayThread.start()
-        else:
-            self._isDisplaySnapShotInfomation=False
-            self.SnapShotDisplayThread.stop()
-            self._isDisplaySnapShotInfomation=None
-            self.ToolDefPreviewButton.setText("Preview")
+
             
 
     def OnCollectToolDefSingleFrame(self,_info):

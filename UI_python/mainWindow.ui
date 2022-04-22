@@ -51,383 +51,14 @@
               </property>
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_11">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
                 <property name="topMargin">
                  <number>0</number>
                 </property>
                 <item>
-                 <layout class="QVBoxLayout" name="verticalLayout_4">
-                  <item>
-                   <widget class="QPushButton" name="IR_hololens_conn">
-                    <property name="text">
-                     <string>Connect to Hololens</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <spacer name="verticalSpacer_3">
-                    <property name="orientation">
-                     <enum>Qt::Vertical</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>20</width>
-                      <height>40</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
-                 </layout>
-                </item>
-                <item>
                  <layout class="QVBoxLayout" name="verticalLayout_5">
-                  <item>
-                   <widget class="QGroupBox" name="groupBox_3">
-                    <property name="font">
-                     <font>
-                      <weight>50</weight>
-                      <bold>false</bold>
-                     </font>
-                    </property>
-                    <property name="title">
-                     <string>AHAT Reflectivity</string>
-                    </property>
-                    <property name="flat">
-                     <bool>false</bool>
-                    </property>
-                    <property name="checkable">
-                     <bool>false</bool>
-                    </property>
-                    <property name="checked">
-                     <bool>false</bool>
-                    </property>
-                    <layout class="QHBoxLayout" name="horizontalLayout_18">
-                     <item>
-                      <layout class="QVBoxLayout" name="verticalLayout_11">
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_4">
-                         <item>
-                          <widget class="QLabel" name="label_2">
-                           <property name="text">
-                            <string>Down limit</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <widget class="QSlider" name="down_limit">
-                           <property name="maximum">
-                            <number>1024</number>
-                           </property>
-                           <property name="value">
-                            <number>128</number>
-                           </property>
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="Down_limit_value">
-                           <property name="minimumSize">
-                            <size>
-                             <width>50</width>
-                             <height>30</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>128</string>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignCenter</set>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_12">
-                         <property name="topMargin">
-                          <number>0</number>
-                         </property>
-                         <item>
-                          <widget class="QLabel" name="label_5">
-                           <property name="text">
-                            <string>Upper limit</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <widget class="QSlider" name="up_limit">
-                           <property name="maximum">
-                            <number>1024</number>
-                           </property>
-                           <property name="value">
-                            <number>512</number>
-                           </property>
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="Up_limit_value">
-                           <property name="minimumSize">
-                            <size>
-                             <width>50</width>
-                             <height>30</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>512</string>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignCenter</set>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                      </layout>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QGroupBox" name="groupBox">
-                    <property name="title">
-                     <string>Data Acquisition</string>
-                    </property>
-                    <layout class="QHBoxLayout" name="horizontalLayout_15">
-                     <item>
-                      <layout class="QVBoxLayout" name="verticalLayout_8">
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_7">
-                         <property name="topMargin">
-                          <number>0</number>
-                         </property>
-                         <item>
-                          <widget class="QCheckBox" name="AHAT_acq">
-                           <property name="text">
-                            <string>AHAT</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <spacer name="horizontalSpacer_2">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>40</width>
-                             <height>20</height>
-                            </size>
-                           </property>
-                          </spacer>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="fps_AHAT">
-                           <property name="minimumSize">
-                            <size>
-                             <width>50</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>fps</string>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_13">
-                         <property name="topMargin">
-                          <number>0</number>
-                         </property>
-                         <item>
-                          <widget class="QCheckBox" name="LF_acq">
-                           <property name="enabled">
-                            <bool>true</bool>
-                           </property>
-                           <property name="text">
-                            <string>Left Front</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <spacer name="horizontalSpacer_4">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>40</width>
-                             <height>20</height>
-                            </size>
-                           </property>
-                          </spacer>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="fps_LF">
-                           <property name="minimumSize">
-                            <size>
-                             <width>50</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>fps</string>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_14">
-                         <property name="topMargin">
-                          <number>0</number>
-                         </property>
-                         <item>
-                          <widget class="QCheckBox" name="RF_acq">
-                           <property name="text">
-                            <string>Right Front</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <spacer name="horizontalSpacer_5">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>40</width>
-                             <height>20</height>
-                            </size>
-                           </property>
-                          </spacer>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="fps_RF">
-                           <property name="minimumSize">
-                            <size>
-                             <width>50</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>fps</string>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_19">
-                         <property name="topMargin">
-                          <number>0</number>
-                         </property>
-                         <item>
-                          <widget class="QCheckBox" name="LL_acq">
-                           <property name="text">
-                            <string>Left Left</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <spacer name="horizontalSpacer_6">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>40</width>
-                             <height>20</height>
-                            </size>
-                           </property>
-                          </spacer>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="fps_LL">
-                           <property name="minimumSize">
-                            <size>
-                             <width>50</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>fps</string>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_20">
-                         <property name="topMargin">
-                          <number>0</number>
-                         </property>
-                         <item>
-                          <widget class="QCheckBox" name="RR_acq">
-                           <property name="text">
-                            <string>Right Right</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <spacer name="horizontalSpacer_7">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>40</width>
-                             <height>20</height>
-                            </size>
-                           </property>
-                          </spacer>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="fps_RR">
-                           <property name="minimumSize">
-                            <size>
-                             <width>50</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>fps</string>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                      </layout>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
                   <item>
                    <widget class="QTabWidget" name="tabWidget_4">
                     <property name="contextMenuPolicy">
@@ -443,6 +74,53 @@
                      <layout class="QVBoxLayout" name="verticalLayout_2">
                       <item>
                        <layout class="QVBoxLayout" name="verticalLayout">
+                        <item>
+                         <layout class="QHBoxLayout" name="horizontalLayout_35">
+                          <property name="topMargin">
+                           <number>0</number>
+                          </property>
+                          <item>
+                           <widget class="QLabel" name="label_17">
+                            <property name="minimumSize">
+                             <size>
+                              <width>100</width>
+                              <height>0</height>
+                             </size>
+                            </property>
+                            <property name="text">
+                             <string>Connection</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QPushButton" name="IR_hololens_conn">
+                            <property name="text">
+                             <string>Connect to Hololens View</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QPushButton" name="HololenUnityDisplayConnection">
+                            <property name="text">
+                             <string>Connect to Hololens Control</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <spacer name="horizontalSpacer_18">
+                            <property name="orientation">
+                             <enum>Qt::Horizontal</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                             <size>
+                              <width>40</width>
+                              <height>20</height>
+                             </size>
+                            </property>
+                           </spacer>
+                          </item>
+                         </layout>
+                        </item>
                         <item>
                          <layout class="QHBoxLayout" name="horizontalLayout_28">
                           <property name="topMargin">
@@ -477,7 +155,7 @@
                              </sizepolicy>
                             </property>
                             <property name="text">
-                             <string>Video</string>
+                             <string>OfflineVIdeoName</string>
                             </property>
                            </widget>
                           </item>
@@ -560,110 +238,6 @@
                           </item>
                          </layout>
                         </item>
-                        <item>
-                         <layout class="QHBoxLayout" name="horizontalLayout_8">
-                          <property name="topMargin">
-                           <number>0</number>
-                          </property>
-                          <item>
-                           <widget class="QLabel" name="label_4">
-                            <property name="minimumSize">
-                             <size>
-                              <width>100</width>
-                              <height>0</height>
-                             </size>
-                            </property>
-                            <property name="text">
-                             <string>Tool Tracking</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QCheckBox" name="KalmanCheckBox">
-                            <property name="text">
-                             <string>Kalman Filter</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <spacer name="horizontalSpacer_11">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="sizeHint" stdset="0">
-                             <size>
-                              <width>40</width>
-                              <height>20</height>
-                             </size>
-                            </property>
-                           </spacer>
-                          </item>
-                         </layout>
-                        </item>
-                        <item>
-                         <layout class="QHBoxLayout" name="horizontalLayout_35">
-                          <property name="topMargin">
-                           <number>0</number>
-                          </property>
-                          <item>
-                           <widget class="QLabel" name="label_17">
-                            <property name="minimumSize">
-                             <size>
-                              <width>100</width>
-                              <height>0</height>
-                             </size>
-                            </property>
-                            <property name="text">
-                             <string>3D View</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QPushButton" name="HololenUnityDisplayConnection">
-                            <property name="text">
-                             <string>Connect</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <spacer name="horizontalSpacer_18">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="sizeHint" stdset="0">
-                             <size>
-                              <width>40</width>
-                              <height>20</height>
-                             </size>
-                            </property>
-                           </spacer>
-                          </item>
-                         </layout>
-                        </item>
-                        <item>
-                         <spacer name="verticalSpacer">
-                          <property name="orientation">
-                           <enum>Qt::Vertical</enum>
-                          </property>
-                          <property name="sizeHint" stdset="0">
-                           <size>
-                            <width>20</width>
-                            <height>40</height>
-                           </size>
-                          </property>
-                         </spacer>
-                        </item>
-                       </layout>
-                      </item>
-                     </layout>
-                    </widget>
-                    <widget class="QWidget" name="tab_10">
-                     <attribute name="title">
-                      <string>Tool</string>
-                     </attribute>
-                     <layout class="QVBoxLayout" name="verticalLayout_23">
-                      <item>
-                       <layout class="QVBoxLayout" name="verticalLayout_21">
                         <item>
                          <layout class="QHBoxLayout" name="horizontalLayout_32">
                           <property name="topMargin">
@@ -835,6 +409,13 @@
                            </widget>
                           </item>
                           <item>
+                           <widget class="QCheckBox" name="KalmanCheckBox">
+                            <property name="text">
+                             <string>Kalman Filter</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
                            <spacer name="horizontalSpacer_20">
                             <property name="orientation">
                              <enum>Qt::Horizontal</enum>
@@ -850,7 +431,355 @@
                          </layout>
                         </item>
                         <item>
-                         <spacer name="verticalSpacer_5">
+                         <widget class="QGroupBox" name="groupBox">
+                          <property name="title">
+                           <string>Open Sensors</string>
+                          </property>
+                          <layout class="QHBoxLayout" name="horizontalLayout_15">
+                           <item>
+                            <layout class="QVBoxLayout" name="verticalLayout_8">
+                             <property name="topMargin">
+                              <number>0</number>
+                             </property>
+                             <item>
+                              <layout class="QHBoxLayout" name="horizontalLayout_7">
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QCheckBox" name="AHAT_acq">
+                                 <property name="text">
+                                  <string>AHAT</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <spacer name="horizontalSpacer_2">
+                                 <property name="orientation">
+                                  <enum>Qt::Horizontal</enum>
+                                 </property>
+                                 <property name="sizeHint" stdset="0">
+                                  <size>
+                                   <width>40</width>
+                                   <height>20</height>
+                                  </size>
+                                 </property>
+                                </spacer>
+                               </item>
+                               <item>
+                                <widget class="QLabel" name="fps_AHAT">
+                                 <property name="minimumSize">
+                                  <size>
+                                   <width>50</width>
+                                   <height>0</height>
+                                  </size>
+                                 </property>
+                                 <property name="text">
+                                  <string>fps</string>
+                                 </property>
+                                 <property name="alignment">
+                                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </item>
+                             <item>
+                              <layout class="QHBoxLayout" name="horizontalLayout_13">
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QCheckBox" name="LF_acq">
+                                 <property name="enabled">
+                                  <bool>true</bool>
+                                 </property>
+                                 <property name="text">
+                                  <string>Left Front</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <spacer name="horizontalSpacer_4">
+                                 <property name="orientation">
+                                  <enum>Qt::Horizontal</enum>
+                                 </property>
+                                 <property name="sizeHint" stdset="0">
+                                  <size>
+                                   <width>40</width>
+                                   <height>20</height>
+                                  </size>
+                                 </property>
+                                </spacer>
+                               </item>
+                               <item>
+                                <widget class="QLabel" name="fps_LF">
+                                 <property name="minimumSize">
+                                  <size>
+                                   <width>50</width>
+                                   <height>0</height>
+                                  </size>
+                                 </property>
+                                 <property name="text">
+                                  <string>fps</string>
+                                 </property>
+                                 <property name="alignment">
+                                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </item>
+                             <item>
+                              <layout class="QHBoxLayout" name="horizontalLayout_14">
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QCheckBox" name="RF_acq">
+                                 <property name="text">
+                                  <string>Right Front</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <spacer name="horizontalSpacer_5">
+                                 <property name="orientation">
+                                  <enum>Qt::Horizontal</enum>
+                                 </property>
+                                 <property name="sizeHint" stdset="0">
+                                  <size>
+                                   <width>40</width>
+                                   <height>20</height>
+                                  </size>
+                                 </property>
+                                </spacer>
+                               </item>
+                               <item>
+                                <widget class="QLabel" name="fps_RF">
+                                 <property name="minimumSize">
+                                  <size>
+                                   <width>50</width>
+                                   <height>0</height>
+                                  </size>
+                                 </property>
+                                 <property name="text">
+                                  <string>fps</string>
+                                 </property>
+                                 <property name="alignment">
+                                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </item>
+                             <item>
+                              <layout class="QHBoxLayout" name="horizontalLayout_19">
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QCheckBox" name="LL_acq">
+                                 <property name="text">
+                                  <string>Left Left</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <spacer name="horizontalSpacer_6">
+                                 <property name="orientation">
+                                  <enum>Qt::Horizontal</enum>
+                                 </property>
+                                 <property name="sizeHint" stdset="0">
+                                  <size>
+                                   <width>40</width>
+                                   <height>20</height>
+                                  </size>
+                                 </property>
+                                </spacer>
+                               </item>
+                               <item>
+                                <widget class="QLabel" name="fps_LL">
+                                 <property name="minimumSize">
+                                  <size>
+                                   <width>50</width>
+                                   <height>0</height>
+                                  </size>
+                                 </property>
+                                 <property name="text">
+                                  <string>fps</string>
+                                 </property>
+                                 <property name="alignment">
+                                  <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </item>
+                             <item>
+                              <layout class="QHBoxLayout" name="horizontalLayout_20">
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QCheckBox" name="RR_acq">
+                                 <property name="text">
+                                  <string>Right Right</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <spacer name="horizontalSpacer_7">
+                                 <property name="orientation">
+                                  <enum>Qt::Horizontal</enum>
+                                 </property>
+                                 <property name="sizeHint" stdset="0">
+                                  <size>
+                                   <width>40</width>
+                                   <height>20</height>
+                                  </size>
+                                 </property>
+                                </spacer>
+                               </item>
+                               <item>
+                                <widget class="QLabel" name="fps_RR">
+                                 <property name="minimumSize">
+                                  <size>
+                                   <width>50</width>
+                                   <height>0</height>
+                                  </size>
+                                 </property>
+                                 <property name="text">
+                                  <string>fps</string>
+                                 </property>
+                                 <property name="alignment">
+                                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </item>
+                            </layout>
+                           </item>
+                          </layout>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QGroupBox" name="groupBox_3">
+                          <property name="font">
+                           <font>
+                            <weight>50</weight>
+                            <bold>false</bold>
+                           </font>
+                          </property>
+                          <property name="title">
+                           <string>Reflectivity Display Parameters</string>
+                          </property>
+                          <property name="flat">
+                           <bool>false</bool>
+                          </property>
+                          <property name="checkable">
+                           <bool>false</bool>
+                          </property>
+                          <property name="checked">
+                           <bool>false</bool>
+                          </property>
+                          <layout class="QHBoxLayout" name="horizontalLayout_18">
+                           <item>
+                            <layout class="QVBoxLayout" name="verticalLayout_11">
+                             <property name="topMargin">
+                              <number>0</number>
+                             </property>
+                             <item>
+                              <layout class="QHBoxLayout" name="horizontalLayout_4">
+                               <item>
+                                <widget class="QLabel" name="label_2">
+                                 <property name="text">
+                                  <string>Down limit</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QSlider" name="down_limit">
+                                 <property name="maximum">
+                                  <number>1024</number>
+                                 </property>
+                                 <property name="value">
+                                  <number>128</number>
+                                 </property>
+                                 <property name="orientation">
+                                  <enum>Qt::Horizontal</enum>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QLabel" name="Down_limit_value">
+                                 <property name="minimumSize">
+                                  <size>
+                                   <width>50</width>
+                                   <height>30</height>
+                                  </size>
+                                 </property>
+                                 <property name="text">
+                                  <string>128</string>
+                                 </property>
+                                 <property name="alignment">
+                                  <set>Qt::AlignCenter</set>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </item>
+                             <item>
+                              <layout class="QHBoxLayout" name="horizontalLayout_12">
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QLabel" name="label_5">
+                                 <property name="text">
+                                  <string>Upper limit</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QSlider" name="up_limit">
+                                 <property name="maximum">
+                                  <number>1024</number>
+                                 </property>
+                                 <property name="value">
+                                  <number>512</number>
+                                 </property>
+                                 <property name="orientation">
+                                  <enum>Qt::Horizontal</enum>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QLabel" name="Up_limit_value">
+                                 <property name="minimumSize">
+                                  <size>
+                                   <width>50</width>
+                                   <height>30</height>
+                                  </size>
+                                 </property>
+                                 <property name="text">
+                                  <string>512</string>
+                                 </property>
+                                 <property name="alignment">
+                                  <set>Qt::AlignCenter</set>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </item>
+                            </layout>
+                           </item>
+                          </layout>
+                         </widget>
+                        </item>
+                        <item>
+                         <spacer name="verticalSpacer">
                           <property name="orientation">
                            <enum>Qt::Vertical</enum>
                           </property>
@@ -1687,162 +1616,18 @@
  <resources/>
  <connections>
   <connection>
-   <sender>CollectStartButton</sender>
+   <sender>ToolDefCollectButton</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>CollectSensorTestData()</slot>
+   <slot>OnToolDefCollectionButtonClicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>385</x>
-     <y>618</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>3</x>
-     <y>933</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>ToolConstructionTool</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>OnToolConstructionButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>522</x>
-     <y>603</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>3</x>
-     <y>546</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>LL_acq</sender>
-   <signal>stateChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>LL_Display()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>270</x>
-     <y>366</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1</x>
-     <y>622</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>up_limit</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>Up_limit_change()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>538</x>
-     <y>207</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1157</x>
-     <y>25</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>KalmanCheckBox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>KalmanFIlterCheckBoxClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>630</x>
-     <y>684</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>2</x>
-     <y>812</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>RF_acq</sender>
-   <signal>stateChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>RF_Display()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>302</x>
-     <y>354</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>2138</x>
-     <y>27</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>ToolDefPreviewButton</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>OnToolPreviewButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>326</x>
-     <y>578</y>
+     <x>344</x>
+     <y>599</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
-     <y>802</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>down_limit</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>Down_limit_change()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>538</x>
-     <y>169</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>918</x>
-     <y>29</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>IR_hololens_conn</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>IR_hololens_connect()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>159</x>
-     <y>138</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>434</x>
-     <y>29</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>LF_acq</sender>
-   <signal>stateChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>LF_Display()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>294</x>
-     <y>323</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>2113</x>
-     <y>28</y>
+     <y>844</y>
     </hint>
    </hints>
   </connection>
@@ -1853,28 +1638,12 @@
    <slot>TestSensorDataPerfusion()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>385</x>
-     <y>652</y>
+     <x>258</x>
+     <y>566</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
      <y>979</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>ToolDefCollectButton</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>OnToolDefCollectionButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>408</x>
-     <y>577</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>844</y>
     </hint>
    </hints>
   </connection>
@@ -1885,12 +1654,44 @@
    <slot>RR_Display()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>302</x>
-     <y>416</y>
+     <x>175</x>
+     <y>383</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
      <y>687</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>IR_hololens_conn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>IR_hololens_connect()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>320</x>
+     <y>499</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>434</x>
+     <y>29</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>down_limit</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>Down_limit_change()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>674</x>
+     <y>136</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>918</x>
+     <y>29</y>
     </hint>
    </hints>
   </connection>
@@ -1901,12 +1702,140 @@
    <slot>AHAT_Display()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>282</y>
+     <x>137</x>
+     <y>259</y>
     </hint>
     <hint type="destinationlabel">
      <x>1880</x>
      <y>29</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>RF_acq</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>RF_Display()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>175</x>
+     <y>321</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2138</x>
+     <y>27</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>KalmanCheckBox</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>KalmanFIlterCheckBoxClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>294</x>
+     <y>466</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>812</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>CollectStartButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>CollectSensorTestData()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>258</x>
+     <y>532</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>3</x>
+     <y>933</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ToolDefPreviewButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToolPreviewButtonClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>258</x>
+     <y>599</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>802</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>LF_acq</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>LF_Display()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>167</x>
+     <y>290</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2113</x>
+     <y>28</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ToolConstructionTool</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToolConstructionButtonClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>447</x>
+     <y>633</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>3</x>
+     <y>546</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>up_limit</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>Up_limit_change()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>677</x>
+     <y>174</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1157</x>
+     <y>25</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>LL_acq</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>LL_Display()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>157</x>
+     <y>352</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1</x>
+     <y>622</y>
     </hint>
    </hints>
   </connection>
