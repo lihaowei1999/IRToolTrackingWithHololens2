@@ -19,7 +19,42 @@ python main.py
 ```
 
 ## UI
+### Connection to Hololens2 Sensors
+- Keep Hololens and PC in one subnet, set the ip of PC as `192.168.1.29`
+- Click `Connect to Hololens View` on UI
+- Click `Sensor` on Hololens hand menu
+- Now the Connection is established
+- Click the check box in `Open Sensors` area, the image for the each sensor would be shown in UI
 
+### Data Saving
+- The data saving is only prepared for AHAT camera depth and reflectivity image
+- Keep the AHAT sensor on
+- Change the file name and frame names in line `offline data`
+- Click `Collect`
+- The file would be saved under folder `UI_python\Cache\`
+
+### Running with offline data
+- Keep the recorded data in folder `UI_python\Cache\`
+- Fill the name of the data file in the place of `OfflineVideoName` in line `offline data`
+- Click `Provide`
+
+### Tool definition
+- The tool definition is generated with a recorded AHAT file of the tool (see `Data Saving`)
+- Collect data when put the tool at the center of the image, around 400mm away, for about 300 frames
+- Put the filename in the place of `OfflineVideoName` in line `Tool Def`, put the tool name you want in the place of `ToolName`
+- Click `ConstructTool`
+- The tool definition file would be saved in folder `UI_python\ToolList\xxx.mat`
+
+### Tool tracking
+- Modify the file `\ToolList\config.json` according to the tools you want to track, in format `["Tool_1.mat","Tool_2.mat",...]`
+- Set the AHAT stream on with either online data or offline data
+- Click `Track`, you can choose whether to set Kalman Filter on
+- The tracking data can be viewed in `Slicer` (scene provided in folder `\SlicerScene`) with following steps
+- Slicer should be implemented with extensions `SlicerIGT` and `SlicerOpenIGTLink`
+- Open Module `IGT\OpenIGTLinkF`
+- Click the existed `IGTLConnector` and set it active (do not change the port and keep the port free)
+- Click the check box `Slicer Display` in the UI
+- Now the transform matrix have been sent to Slicer, the transformation of Tool_1 is linked to an coordinate model, you will find it moving in the scene if the tool can be recoganized and tracked
 
 
 ## Citation
