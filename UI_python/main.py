@@ -5,6 +5,7 @@ from tkinter.messagebox import NO
 from tokenize import Single
 from types import FrameType
 from typing import Final
+from matplotlib.transforms import Transform
 from numpy.core.defchararray import lower
 from numpy.core.numeric import NaN
 from My_classes import *
@@ -84,8 +85,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self._workingDirect="Cache/"
         self.RootPath="Cache/"
-        self.defaultRecordingPath="Cache/AHATRecordData.npy"
-        self.defaultRecordingTrackingData="Cache/AHATTrackingRecordData.npy"
 
         self._iscollectingTrackingData=False
         self._collectedTrakingData=[]
@@ -117,6 +116,8 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.slerppercent=0.4
         self.interplotpercent=0.5
         self.KalmanFilterStatus=False
+        self.IGTDisplayStatus=False
+        self.IGTClient=None
 
         ## for precision test
         self.PrecisionTestNDI=None
@@ -148,9 +149,12 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.ExperimentEndTransform=np.diag([1.0,1.0,1.0,1.0])
         self.ControlId=0
 
+# Checked
     def Init_Signal_and_Slot(self):
         self.AHATExperimentTrackingButton.clicked.connect(self.OnAHATExperimentTrackingButtonClicked)
+        self.IGTDisplayCheckBox.clicked['bool'].connect(self.IGTDisplayCheckBoxClicked)
 
+# Checked
     def initLogger(self):
         self.logger = logging.getLogger('Hololens')
         # disable sys.stdout
@@ -171,7 +175,8 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         streamHandler.setLevel(logging.DEBUG)
         streamHandler.setFormatter(logging.Formatter(fmt=simple_format, datefmt=datefmt))
         self.logger.addHandler(streamHandler)
-                
+
+# Checked
     def IR_hololens_connect(self):
         self.Sensor_AHAT=Sensor_Network("192.168.1.29",3001,SensorType.AHAT_CAMERA)
         self.Sensor_LF=Sensor_Network("192.168.1.29",3002,SensorType.LEFT_FRONT)
@@ -186,36 +191,45 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.Sensor_RR.connect()
         self.logger.info("connect successfully")
         
+# Checked
     def Down_limit_change(self,val):
         self.Down_limit_value.setText(str(val))
         self.down_limit_ab=val
         self.Set_para()
     
+# Checked
     def Up_limit_change(self,val):
         self.Up_limit_value.setText(str(val))
         self.up_limit_ab=val
         self.Set_para()
 
+# Checked
     def Set_para(self):
         if self.AHAT_isworking:
             self.AHAT_trans_Thread.setbound(self.down_limit_ab,self.up_limit_ab)
 
+# Checked
     def Refresh_AHAT_display(self,imgs):
         self.Depth_image.setPixmap(imgs[1])
         self.Ab_image.setPixmap(imgs[3])
         
+# Checked
     def Refersh_LF_display(self,imgs):
         self.LFImage.setPixmap(imgs[1])
         
+# Checked
     def Refersh_LL_display(self,imgs):
         self.LLImage.setPixmap(imgs[1])
         
+# Checked
     def Refersh_RF_display(self,imgs):
         self.RFImage.setPixmap(imgs[1])
         
+# Checked
     def Refersh_RR_display(self,imgs):
         self.RRImage.setPixmap(imgs[1])
           
+# Checked
     def AHAT_Display(self,stat):
         if stat > 0:
             self.AHAT_isworking=True
@@ -238,6 +252,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.RawAHATQueue=queue.Queue(maxsize=self._mx)
             self.AHATQueue=queue.Queue(maxsize=self._mx)
         
+# Checked
     def LF_Display(self,stat):
         if stat>0:
             self.LF_isworking=True
@@ -260,6 +275,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.LFRawQueue=queue.Queue(maxsize=self._mx_vlc)
             self.LFImQueue=queue.Queue(maxsize=self._mx_vlc)
         
+# Checked
     def LL_Display(self,stat):
         if stat>0:
             self.LL_isworking=True
@@ -282,6 +298,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.LLRawQueue=queue.Queue(maxsize=self._mx_vlc)
             self.LLImQueue=queue.Queue(maxsize=self._mx_vlc)
         
+# Checked
     def RF_Display(self,stat):
         if stat>0:
             self.RF_isworking=True
@@ -304,6 +321,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.RFRawQueue=queue.Queue(maxsize=self._mx_vlc)
             self.RFImQueue=queue.Queue(maxsize=self._mx_vlc)
         
+# Checked
     def RR_Display(self,stat):
         if stat>0:
             self.RR_isworking=True
@@ -326,21 +344,27 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.RRRawQueue=queue.Queue(maxsize=self._mx_vlc)
             self.RRImQueue=queue.Queue(maxsize=self._mx_vlc)
     
+# Checked
     def RRfps(self,_fps):
         self.fps_RR.setText(str(_fps)+" fps")
     
+# Checked
     def LLfps(self,_fps):
         self.fps_LL.setText(str(_fps)+" fps")
         
+# Checked
     def RFfps(self,_fps):
         self.fps_RF.setText(str(_fps)+" fps")
         
+# Checked
     def LFfps(self,_fps):
         self.fps_LF.setText(str(_fps)+" fps")
-        
+
+# Checked
     def AHATfps(self,_fps):
         self.fps_AHAT.setText(str(_fps)+" fps")
     
+# Checked
     def KalmanFIlterCheckBoxClicked(self,_Status):
         if _Status:
             # Start Kalman Filter Here
@@ -352,6 +376,19 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.KalmanFilterStatus=False
             self.logger.info("Tool Tracking Kalman Filter Off")
 
+# Checked
+    def IGTDisplayCheckBoxClicked(self,_Status):
+        if _Status:
+            # Start Kalman Filter Here
+            self.IGTDisplayStatus=True
+            self.logger.info("Tool Display Slicer On")
+        
+        else:
+            # Stop Kalman Filter Here
+            self.IGTDisplayStatus=False
+            self.logger.info("Tool Display Slicer Off")
+
+# Checked
     def CollectSensorTestData(self):
         if not self._isRecordingAHATDATA:
             self._isRecordingAHATDATA=True
@@ -367,9 +404,11 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self._isRecordingAHATDATA=False
             self.CollectStartButton.setText("Collect")
 
+# Checked
     def AlterCollectProgressBar(self,num):
         self.CollectProgressorbar.setValue(num)
 
+# Checked
     def TestSensorDataPerfusion(self):
         if not self._isProvidingAHATDATA:
             self._isProvidingAHATDATA=True
@@ -396,15 +435,67 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.RawAHATQueue=queue.Queue(maxsize=self._mx)
             self.AHATQueue=queue.Queue(maxsize=self._mx)      
 
+# Checked
     def OnToolConstructionButtonClicked(self):
         def ToolDefLossFunction(targetpose,args):
             AllData=args
             Loss=np.mean(np.sqrt(np.sum((AllData-targetpose)**2,1)))
             return Loss
         FileName="Cache/"+self.ToolDefFileNameEditLine.text()+".npy"
-        DataDefCollected=np.load(FileName)
+        
+        def ToolDefLossFunction(targetpose,args):
+            AllData=args
+            Loss=np.mean(np.sqrt(np.sum((AllData-targetpose)**2,1)))
+            return Loss
+
+        _upperlim=256*15
+        _downlim=256*1.5
+        _minSize=10
+        _maxSize=300
+        _distanceTolerance=12
+        _preretval=0
+        _prelabel=[]
+        _prestats=[]
+        _precentroids=[]
+        _prelabelcorr=[]
+        _intrin=loadmat('AHAT_Para_Python.mat')
+        mtx=_intrin['Mtx']
+        distcoef=_intrin['dist']
+        AllAHATData=np.load(FileName,allow_pickle=True)
+        Data_Length=len(AllAHATData)
+        xyzs=[]
+        for num_fr in range(Data_Length):
+            Curr_fr=AllAHATData[num_fr]
+            _Frame=Curr_fr.MatReflectivity
+            _DepthFrame=Curr_fr.MatDepth
+            # _im=_Frame
+            _im=copy.deepcopy(_Frame)
+            _im[_im>=_upperlim]=_upperlim
+            _im[_im<=_downlim]=_downlim
+            _im=(_im-_downlim)*(256*256/_upperlim)/(_upperlim-_downlim)*255
+            _mask=np.array(_im/256,dtype='uint8')
+            _im[_mask==0]=0
+            _displayTag=np.zeros([512,512])
+            retval,labels,stats,centroids,label_corr=DetectBalls(_mask,_minSize,_maxSize,_distanceTolerance,_preretval,[],[],_precentroids,_prelabelcorr)
+            _preretval=retval
+            _precentroids=centroids
+            _prelabelcorr=label_corr
+            _temp_xy = cv2.undistortPoints(centroids,mtx,distcoef)
+            _xyd=[]
+            _xyz=[]
+            for j in range(centroids.shape[0]):
+                _u=centroids[j,0]
+                _v=centroids[j,1]
+                _d=_DepthFrame[int(_v),int(_u)]
+                _xyd.append([_temp_xy[j][0][0],_temp_xy[j][0][1],_d])
+                _ori_xyz=[_temp_xy[j][0][0],_temp_xy[j][0][1],1]
+                _l=np.sqrt(sum(np.array(_ori_xyz)**2))
+                _real_xyz=_ori_xyz/_l*_d
+                _lreal=np.sqrt(sum(np.array(_real_xyz)**2))
+                _xyz.append(list(_real_xyz/_lreal*(_lreal+5.75)))
+            xyzs.append(_xyz)
+        DataDefCollected=np.array(xyzs)
         BaseFrame=DataDefCollected[0]
-        # assert n >4 
         NumPoints=BaseFrame.shape[0]
         assert NumPoints>=4 
         DetectionTolerance=5
@@ -424,89 +515,59 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             EffectivePoints.append(np.reshape(FrameDataWithRightSequence,[3*NumPoints]))
         ToolDefFrames=np.array(EffectivePoints)
         EffectiveFrameNum=ToolDefFrames.shape[0]
-        print("Effective Frame Num : "+str(EffectiveFrameNum))
+
         MeanToolDefintion=np.mean(ToolDefFrames,0)
-        print(np.reshape(MeanToolDefintion,[4,3]))
         Res=optimize.minimize(ToolDefLossFunction,MeanToolDefintion,args=(ToolDefFrames,))
         FinalLoss=Res['fun']/np.sqrt(NumPoints)
         ToolShape=np.reshape(Res['x'],[NumPoints,3])
         ToolShape=ToolShape-np.mean(ToolShape,0)
+        
         ToolName=self.ToolDefNameEditLine.text()
-        print(ToolShape)
-        print(FinalLoss)
         Pathtosave=os.path.join(self.ToolListRootDir,(ToolName+".mat"))
         savemat(Pathtosave,{"ToolName":ToolName,"ToolShape":ToolShape,"Loss":FinalLoss})
+        self.logger.info("\n \n"+"Construct a Tool\n"+
+                        "Marker Num : "+str(NumPoints)+"\n"+"Tool Shape\n"+str(ToolShape)+"\n"+
+                        "Definition Error : " +str(FinalLoss)+"  mm (RMSE)\n"+
+                        "Save to : "+Pathtosave+"\n")
 
+# Checked
     def OnAHATExperimentTrackingButtonClicked(self):
-        ToolDefFolder=["ExperimentTool/Model_1/",
-                        "ExperimentTool/Model_2/",
-                        "ExperimentTool/Model_3/",
-                        "ExperimentTool/Drill/"]
-        TransformDefFile=["ExperimentTool/RegistrationResults/Model_1.mat",
-                            "ExperimentTool/RegistrationResults/Model_2.mat",
-                            "ExperimentTool/RegistrationResults/Model_3.mat",
-                            "ExperimentTool/RegistrationResults/Needle.mat"]
-        ControlIds=[1,2,3,5]
         if not self.Experiment_isTrackingObject:
             self.Experiment_isTrackingObject=True
-            SelectNum=self.AHATExperimentTrackingObjectSelectionBox.currentIndex()
-            ToolFolder=ToolDefFolder[SelectNum]
-            if SelectNum==3:
-                self.ExperimentEndTransform=loadmat(TransformDefFile[SelectNum])['T']
-            else:
-                self.ExperimentEndTransform=np.linalg.inv(loadmat(TransformDefFile[SelectNum])['T'])
-            self.ControlId=ControlIds[SelectNum]
+            ToolFolder=self.ToolListRootDir
             self.AHATTrackIRToolFromFolder(ToolFolder,self.AHATExperimentCalibrationTrackingDataReceivedCallback,1)
             self.AHATExperimentTrackingTimer=QtCore.QTimer()
             self.AHATExperimentTrackingTimer.timeout.connect(self.OnAHATExperimentTrackingTimerTimeOut)
             self.AHATExperimentTrackingTimer.start(30)
-
         else:
             self.Experiment_isTrackingObject=False
             self.AHATExperimentTrackingTimer.timeout.disconnect(self.OnAHATExperimentTrackingTimerTimeOut)
             self.AHATExperimentTrackingTimer=None
+            ToolFolder=self.ToolListRootDir
             self.AHATTrackIRToolFromFolder(ToolFolder,self.AHATExperimentCalibrationTrackingDataReceivedCallback,0)
     
+# Checked
     def OnAHATExperimentTrackingTimerTimeOut(self):
-        target2AHAT=self.TrackingMartrixs[0]
-        theta=[self.registerXangleData*3.1415/180,self.registerYangleData*3.1415/180,self.registerZangleData*3.1415/180]
-        R_x = np.array([[1,         0,                  0                   ],
-                [0,         math.cos(theta[0]), -math.sin(theta[0]) ],
-                [0,         math.sin(theta[0]), math.cos(theta[0])  ]
-                ])            
-        R_y = np.array([[math.cos(theta[1]),    0,      math.sin(theta[1])  ],
-                        [0,                     1,      0                   ],
-                        [-math.sin(theta[1]),   0,      math.cos(theta[1])  ]
-                        ])
-                    
-        R_z = np.array([[math.cos(theta[2]),    -math.sin(theta[2]),    0],
-                        [math.sin(theta[2]),    math.cos(theta[2]),     0],
-                        [0,                     0,                      1]
-                        ])
-        R=np.diag([1.,1.,1.,1.])
-        R[0:3,0:3]=R_z@R_y@R_x
-        R[0][3]=self.registerDataX
-        R[1][3]=self.registerDataY
-        R[2][3]=self.registerDataZ
-        HololensPos=self.HololensUnityDisplayController.GetHololensPosition()
-        trans=np.array([HololensPos[0],-HololensPos[1],HololensPos[2]])*1000
-        quat=np.array([HololensPos[3],-HololensPos[4],HololensPos[5],-HololensPos[6]])
-        rota=RigidTransform(quat,trans)
-        rs_holo_matrix=np.zeros((4,4))
-        rs_holo_matrix[0:3,0:3]=rota.rotation
-        rs_holo_matrix[0:3,3]=rota.translation
-        rs_holo_matrix[3,3]=1
+        # self.logger.info("Tracking Result : "+"\n"+str(self.TrackingMartrixs))
+        if self.IGTDisplayStatus:
+            if not self.IGTClient:
+                self.IGTClient=pyigtl.OpenIGTLinkClient("127.0.0.1", 18944)
+                self.logger.info("IGT established")
+            for tool_num in range(len(self.TrackingMartrixs)):
+                TransformMatrix=np.array(self.TrackingMartrixs[tool_num])
+                mess=pyigtl.TransformMessage(TransformMatrix,device_name="Tool_"+str(tool_num))
+                self.IGTClient.send_message(mess)
+        else:
+            self.logger.info("Tracking Result : "+"\n"+str(self.TrackingMartrixs))
 
-        TargetPos=rs_holo_matrix@R@target2AHAT@self.ExperimentEndTransform
-        print(TargetPos)
-        self.HololensUnityDisplayController.SetPosition(self.ControlId,TargetPos)
-
+# Checked
     def AHATExperimentCalibrationTrackingDataReceivedCallback(self,info):
         if self.KalmanFilterStatus:
             self.TrackingMartrixs=info[0].TransformatrixFiltered
         else:
             self.TrackingMartrixs=info[0].Transformatrix
 
+# Checked
     def AHATTrackIRToolFromFolder(self,FolderName,_callback,stat):
         ToolLoader=self.LoadToolFromFolder(FolderName)
         if not ToolLoader[0]:
@@ -526,9 +587,11 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.tracking_ir_thread.stop()
             self.tracking_ir_thread=None
 
+# Checked
     def EmptyTask(self,data):
         pass
-    
+
+# Checked
     def LoadToolFromFolder(self,FolderName):
         ToolListRootDir=FolderName
         AvailableFiles=os.listdir(ToolListRootDir)

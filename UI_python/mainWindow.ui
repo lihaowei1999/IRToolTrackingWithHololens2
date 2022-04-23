@@ -148,7 +148,7 @@
                              </sizepolicy>
                             </property>
                             <property name="text">
-                             <string>OfflineVIdeoName</string>
+                             <string>OfflineVideoName</string>
                             </property>
                            </widget>
                           </item>
@@ -314,6 +314,13 @@
                            <widget class="QCheckBox" name="KalmanCheckBox">
                             <property name="text">
                              <string>Kalman Filter</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QCheckBox" name="IGTDisplayCheckBox">
+                            <property name="text">
+                             <string>Slicer Display</string>
                             </property>
                            </widget>
                           </item>

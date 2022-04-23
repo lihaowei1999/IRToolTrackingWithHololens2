@@ -236,7 +236,6 @@ class AHAT_NDIToolScene:
             for kf in range(len(self.Tools[tl].Points)):
                 KalmanForTool.append(DepthFilterKalman())
             self.KalmanFilters.append(KalmanForTool)
-        print(self.KalmanFilters)
         
     
 

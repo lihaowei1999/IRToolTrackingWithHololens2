@@ -18,6 +18,8 @@ from scipy.io import savemat
 from AHATNDITracker import *
 import copy
 
+
+
 class AHATIRToolTracking(QThread):
     SignalTool=pyqtSignal(tuple)
     SignalFPS=pyqtSignal(int)
@@ -178,8 +180,6 @@ class AHATDataCollectThread(QThread):
                 _thisFrame=self.AHATDisplayFrame.get()
                 self.result.append(_thisFrame)
                 self.framenum-=1
-                print(self.framenum)
-                print(int((self.allframenum-self.framenum)/self.allframenum))
                 self.Signal_collectPercentag.emit(int((self.allframenum-self.framenum)/self.allframenum*100))
             else:
                 self.continueFalseEnum+=1
@@ -199,6 +199,48 @@ class AHATDataCollectThread(QThread):
                 self._start=False  
         except Exception as e:
             self.logger.error(e)
+
+class AHATDataPerfusionThread(QThread):
+    SignalPercentage=pyqtSignal(int)
+    def __init__(self,logger,raw_AHAT_Queue,_path):
+        super(AHATDataPerfusionThread,self).__init__()
+        self.logger=logger
+        self.RawAHATQueue=raw_AHAT_Queue
+        self.DataPath=_path
+        self._start=False
+        self._StartMutex=QMutex()
+        self.CurentFrame=0
+        self.AllFrameNum=0
+        self.timeinterv=30 #ms
+        self.Data=None
+        self.FpsCal=None
+    
+    def run(self):
+        with QMutexLocker(self._StartMutex):
+            self._start=True
+        if not os.path.exists(self.DataPath):
+            self.logger.error("No Data File : "+self.DataPath+ "\n Please Check")
+            return
+        self.Data=np.load(self.DataPath,allow_pickle=True)
+        self.AllFrameNum=len(self.Data)
+        self.logger.info("Start Data input")
+        while True:
+            if not self._start:
+                self.logger.info("Data Input Stop")
+                return
+            temp_AHATDisplayFrame=self.Data[self.CurentFrame]
+            self.SignalPercentage.emit(int(100*self.CurentFrame/self.AllFrameNum))
+            self.CurentFrame+=1
+            if self.CurentFrame>=self.AllFrameNum:
+                self.CurentFrame=0
+            temp_RawFrame=AHATRawFrame(temp_AHATDisplayFrame.MatDepth,temp_AHATDisplayFrame.MatReflectivity,temp_AHATDisplayFrame.timestamp)
+            if not self.RawAHATQueue.full():
+                self.RawAHATQueue.put(temp_RawFrame)
+            QThread.msleep(self.timeinterv)
+
+    def stop(self):
+        with QMutexLocker(self._StartMutex):
+            self._start=False
 
 class AHAT_ImageDisplayThread(QThread):
     Singal_img=pyqtSignal(tuple)
