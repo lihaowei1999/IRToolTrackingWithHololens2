@@ -18,8 +18,6 @@ import copy
 from scipy.io import savemat
 from AHATNDITracker import *
 from ThreadFactory import *
-from FunctionFactory import *
-from XMLDataLoader import *
 import pyigtl
 from scipy.io import savemat,loadmat
 from scipy import optimize
@@ -142,7 +140,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.TrackingMartrixs=[]
 
-        self.LF2AHAT=loadmat("LF2AHAT.mat")["T"]
 
         #self.Img2Tracker=np.load("Model_1_Img_2_Tracker.npy")
 
