@@ -24,8 +24,6 @@ import pyigtl
 from scipy.io import savemat,loadmat
 from scipy import optimize
 import json
-from sksurgerynditracker.nditracker import NDITracker
-
 
 class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
     
@@ -98,7 +96,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self._iscollectingToolDefData=False
         self.ToolDefTotalFrame=0
         self.ToolDefCurrentFrame=0
-        self.DefaultToolDefSavePath="Cache/ToolDefFile.npy"
         self.ToolDefData=None
         self.ToolDefPreviewFrame=queue.Queue(maxsize=1)
 
@@ -122,7 +119,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.slerppercent=0.4
         self.interplotpercent=0.5
         self.KalmanFilterStatus=False
-        self.Init_UI_Setup()
 
         ## for precision test
         self.PrecisionTestNDI=None
@@ -156,47 +152,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         self.ControlId=0
 
     def Init_Signal_and_Slot(self):
-        self.HololenUnityDisplayConnection.clicked.connect(self.OnHololensUnityDisplayConnectionButtonClicked)
-        #self.DisplayTestButton.clicked.connect(self.OnDisplayTestButtonClicked)
-        self.RegisterXSlider.valueChanged.connect(self.OnRegisterXSliderValueChanged)
-        self.RegisterYSlider.valueChanged.connect(self.OnRegisterYSliderValueChanged)
-        self.RegisterZSlider.valueChanged.connect(self.OnRegisterZSliderValueChanged)
-        self.RegisterXangleSlider.valueChanged.connect(self.OnRegisterXangleSliderValueChanged)
-        self.RegisterYangleSlider.valueChanged.connect(self.OnRegisterYangleSliderValueChanged)
-        self.RegisterZangleSlider.valueChanged.connect(self.OnRegisterZangleSliderValueChanged)
-        self.RegisterResultSavingButton.clicked.connect(self.OnRegisterResultSavingButtonClicked)
-
-        self.UnityDelaySettingSlider.valueChanged.connect(self.OnUnityDelaySettingSlidervalueChanged)
-        self.UnityDelaySettingButton.clicked.connect(self.OnUnityDelaySettingButtonClicked)
-        self.unityslerpsettingbutton.clicked.connect(self.OnunityslerpsettingbuttonClicked)
-        self.unityslerpsettingslider.valueChanged.connect(self.OnunityslerpsettingsliderValueChanged)
-        self.unityintersettingbutton.clicked.connect(self.OnunityintersettingbuttonClicked)
-        self.unityintersettingslider.valueChanged.connect(self.OnunityintersettingsliderValueChanged)
-
-        self.AHATExperimentCalibrationButton.clicked.connect(self.OnAHATExperimentCalibrationButtonClicked)
         self.AHATExperimentTrackingButton.clicked.connect(self.OnAHATExperimentTrackingButtonClicked)
-        self.AHATExperimentClearViewButton.clicked.connect(self.OnAHATExperimentClearViewButtonClicked)
-
-
-    def Init_UI_Setup(self):
-        RegisterData=loadmat("scripts/ViewControl/RegisterData.mat")
-        self.RegisterXSlider.setValue(int(RegisterData["x"][0][0]*10))
-        self.RegisterYSlider.setValue(int(RegisterData["y"][0][0]*10))
-        self.RegisterZSlider.setValue(int(RegisterData["z"][0][0]*10))
-        self.RegisterXangleSlider.setValue(int(RegisterData["ax"][0][0]*500))
-        self.RegisterYangleSlider.setValue(int(RegisterData["ay"][0][0]*500))
-        self.RegisterZangleSlider.setValue(int(RegisterData["az"][0][0]*500))
-
-        DelayData=loadmat("scripts/ViewControl/DelaySetup.mat")
-        self.UnityDelaySettingSlider.setValue(DelayData["delay"][0][0])
-        SlerpData=loadmat("scripts/ViewControl/SlerpPercentSetup.mat")
-        self.unityslerpsettingslider.setValue(int(SlerpData["slerp"][0][0]*100))
-        InterData=loadmat("scripts/ViewControl/InterplotPercentSetup.mat")
-        self.unityintersettingslider.setValue(int(InterData["inter"][0][0]*100))
-
-        self.AHATExperimentTrackingObjectSelectionBox.addItems(["Model_1","Model_2","Model_3","Drill"])
-
-
 
     def initLogger(self):
         self.logger = logging.getLogger('Hololens')
@@ -218,9 +174,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         streamHandler.setLevel(logging.DEBUG)
         streamHandler.setFormatter(logging.Formatter(fmt=simple_format, datefmt=datefmt))
         self.logger.addHandler(streamHandler)
-        
-        
-
                 
     def IR_hololens_connect(self):
         self.Sensor_AHAT=Sensor_Network("192.168.1.29",3001,SensorType.AHAT_CAMERA)
@@ -265,8 +218,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         
     def Refersh_RR_display(self,imgs):
         self.RRImage.setPixmap(imgs[1])
-        
-            
+          
     def AHAT_Display(self,stat):
         if stat > 0:
             self.AHAT_isworking=True
@@ -289,7 +241,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.RawAHATQueue=queue.Queue(maxsize=self._mx)
             self.AHATQueue=queue.Queue(maxsize=self._mx)
         
-    
     def LF_Display(self,stat):
         if stat>0:
             self.LF_isworking=True
@@ -392,57 +343,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         
     def AHATfps(self,_fps):
         self.fps_AHAT.setText(str(_fps)+" fps")
-
-    def LoadToolFromFile(self):
-        ToolListRootDir=self.ToolListRootDir
-        AvailableFiles=os.listdir(ToolListRootDir)
-        if not "config.json" in AvailableFiles:
-            self.logger.error("Config File Not Found")
-            return (False,)
-        ConfigPath=os.path.join(ToolListRootDir,"config.json")
-        with open(ConfigPath,'r') as f:
-            ToolNamesList=json.load(f)
-        ToolNames=[]
-        ToolShapes=[]
-        for i in range(len(ToolNamesList)):
-            ToolFileName=ToolNamesList[i]+".mat"
-            if not ToolFileName in AvailableFiles:
-                self.logger.error("Tool Cannot Find : "+ToolFileName)
-                return (False,)
-                # return 
-            FullName=os.path.join(ToolListRootDir,ToolFileName)
-            Tool=loadmat(FullName)
-
-            ToolNames.append(Tool['ToolName'][0])
-            ToolShapes.append(NDI_Tool(Tool['ToolShape']))
-        return (True,ToolNames,ToolShapes)
-
-        # self.DrawQWTPlot()
-
-    def ChangeFPSTracking(self,_fps:int):
-        self.TrackingFrameRateLabel.setText(str(_fps)+"fps")
     
-    def NDI_Connection(self):
-        self.logger.info("Start Connection to NDI")
-        self.tracker=NDI_tracker(["/home/lihaowei/Documents/GitHub/Hololens_Qt/trial_1/tracker/boardtracker.rom"])
-        self.tracker.machine_start()
-        self.logger.info("NDI Connected")
-        
-        
-
-            
-        
-        
-    def DealSnapShotInfomation(self,_info):
-        self.setSnapShotLabel(_info[0])
-        if not self.SnapShotFrame.empty():
-            _=self.SnapShotFrame.get()
-        self.SnapShotFrame.put(_info)
-    
-
-
-        
-
     def KalmanFIlterCheckBoxClicked(self,_Status):
         if _Status:
             # Start Kalman Filter Here
@@ -496,44 +397,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.AHAT_trans_Thread=None
             self.ProvideAHATDataThread=None
             self.RawAHATQueue=queue.Queue(maxsize=self._mx)
-            self.AHATQueue=queue.Queue(maxsize=self._mx)
-
-
-    def IGTDisplayChange(self,status):
-        self.igtDisplayStatus=status
-
-
-
-            
-
-    def OnCollectToolDefSingleFrame(self,_info):
-        if not self.ToolDefPreviewFrame.empty():
-            _=self.ToolDefPreviewFrame.get()
-        self.ToolDefPreviewFrame.put(_info[0])
-
-
-    def OnToolDefCollectionButtonClicked(self):
-        print(self.ToolDefFileNameEditLine.text())
-        if not self._iscollectingToolDefData:
-            self._iscollectingToolDefData=True
-            self.ToolDefTotalFrame=self.ToolDefFrameSpinBox.value()
-            self.ToolDefCollectButton.setText("Stop")
-            ToolFileName="Cache/"+self.ToolDefFileNameEditLine.text()+".npy"
-            ToolDefFrameNum=self.ToolDefFrameSpinBox.value()
-            self.ToolDefDataCollectingThread=ToolDefDataCollection(self.logger,self.ToolDefPreviewFrame,ToolDefFrameNum,ToolFileName)
-            self.ToolDefDataCollectingThread.SignalCollectionPercentage.connect(self.OnToolDefProgressBarChange)
-            self.ToolDefDataCollectingThread.start()
-
-        else:
-            self._iscollectingToolDefData=False
-            self.ToolDefCollectButton.setText("Collect")
-            self.ToolDefDataCollectingThread.stop()
-            self.ToolDefDataCollectingThread=None
-
-
-    def OnToolDefProgressBarChange(self,val):
-        self.ToolDefprogressBar.setValue(val[0])
-        
+            self.AHATQueue=queue.Queue(maxsize=self._mx)      
 
     def OnToolConstructionButtonClicked(self):
         def ToolDefLossFunction(targetpose,args):
@@ -576,72 +440,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         Pathtosave=os.path.join(self.ToolListRootDir,(ToolName+".mat"))
         savemat(Pathtosave,{"ToolName":ToolName,"ToolShape":ToolShape,"Loss":FinalLoss})
 
-
-    def OnHololensUnityDisplayConnectionButtonClicked(self):
-        self.HololensUnityDisplayController=LoadDeviceData("scripts/ViewControl/HololensDevice.xml")[3][0]
-        self.HololensUnityDisplayController.ConnectSocketChannel()
-        self.logger.info("Hololens Unity 3D View Connected")
-
-
-
-    def OnRegisterXSliderValueChanged(self,value):
-        val=value/10 # mm
-        self.LabelRegisterXDisplay.setText(str(val))
-        self.registerDataX=val
-
-    def OnRegisterYSliderValueChanged(self,value):
-        val=value/10 # mm
-        self.LabelRegisterYDisplay.setText(str(val))
-        self.registerDataY=val
-
-    def OnRegisterZSliderValueChanged(self,value):
-        val=value/10 # mm
-        self.LabelRegisterZDisplay.setText(str(val))
-        self.registerDataZ=val
-
-    def OnRegisterXangleSliderValueChanged(self,value):
-        val=value/500
-        self.LabelRegisterXAngleDisplay.setText(str(val))
-        self.registerXangleData=val
-    
-    def OnRegisterYangleSliderValueChanged(self,value):
-        val=value/500
-        self.LabelRegisterYAngleDisplay.setText(str(val))
-        self.registerYangleData=val
-
-    def OnRegisterZangleSliderValueChanged(self,value):
-        val=value/500
-        self.LabelRegisterZAngleDisplay.setText(str(val))
-        self.registerZangleData=val
-
-    def OnRegisterResultSavingButtonClicked(self):
-        savemat("scripts/ViewControl/RegisterData.mat",{"x":self.registerDataX,"y":self.registerDataY,"z":self.registerDataZ,"ax":self.registerXangleData,"ay":self.registerYangleData,"az":self.registerZangleData})
-
-    def OnUnityDelaySettingSlidervalueChanged(self,value):
-        self.registerTime=value
-        self.UnityDelayDisplayLabel.setText(str(value))
-
-    def OnUnityDelaySettingButtonClicked(self):
-        self.logger.info("Setting Unity Delay to "+str(self.registerTime)+" frames")
-        self.HololensUnityDisplayController.SetUnityDelay(self.registerTime)
-        savemat("scripts/ViewControl/DelaySetup.mat",{"delay":self.registerTime})
-
-    def OnunityslerpsettingbuttonClicked(self):
-        self.HololensUnityDisplayController.SetSlerpPercentage(self.slerppercent)
-        savemat("scripts/ViewControl/SlerpPercentSetup.mat",{"slerp":self.slerppercent})
-
-    def OnunityslerpsettingsliderValueChanged(self,value):
-        self.slerppercent=value/100
-        self.unityslerpvaluedisplaylabel.setText(str(self.slerppercent))
-
-    def OnunityintersettingbuttonClicked(self):
-        self.HololensUnityDisplayController.SetInterplotPercentage(self.interplotpercent)
-        savemat("scripts/ViewControl/InterplotPercentSetup.mat",{"inter":self.interplotpercent})
-
-    def OnunityintersettingsliderValueChanged(self,value):
-        self.interplotpercent=value/100
-        self.unityintervaluedisplaylabel.setText(str(self.interplotpercent))
-
     def OnAHATExperimentTrackingButtonClicked(self):
         ToolDefFolder=["ExperimentTool/Model_1/",
                         "ExperimentTool/Model_2/",
@@ -672,8 +470,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
             self.AHATExperimentTrackingTimer=None
             self.AHATTrackIRToolFromFolder(ToolFolder,self.AHATExperimentCalibrationTrackingDataReceivedCallback,0)
     
-
-
     def OnAHATExperimentTrackingTimerTimeOut(self):
         target2AHAT=self.TrackingMartrixs[0]
         theta=[self.registerXangleData*3.1415/180,self.registerYangleData*3.1415/180,self.registerZangleData*3.1415/180]
@@ -707,64 +503,6 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         TargetPos=rs_holo_matrix@R@target2AHAT@self.ExperimentEndTransform
         print(TargetPos)
         self.HololensUnityDisplayController.SetPosition(self.ControlId,TargetPos)
-
-
-
-
-    def OnAHATExperimentCalibrationButtonClicked(self):
-        if not self.Experiment_isCalibrating:
-            self.Experiment_isCalibrating=True
-            #self.AHAT_acq.setCheckState(True)
-            self.AHATTrackIRToolFromFolder("ExperimentTool/Calibration/",self.AHATExperimentCalibrationTrackingDataReceivedCallback,1)
-            self.AHATExperimentCalibrationTimer=QtCore.QTimer()
-            self.AHATExperimentCalibrationTimer.timeout.connect(self.OnAHATExperimentCalibrationTimerTimeOut)
-            self.AHATExperimentCalibrationTimer.start(30)
-
-        else:
-            self.Experiment_isCalibrating=False
-            self.AHATExperimentCalibrationTimer.timeout.disconnect(self.OnAHATExperimentCalibrationTimerTimeOut)
-            self.AHATExperimentCalibrationTimer=None
-            self.AHATTrackIRToolFromFolder("ExperimentTool/Calibration/",self.AHATExperimentCalibrationTrackingDataReceivedCallback,0)
-            #self.AHAT_acq.setCheckState(False)
-
-    def OnAHATExperimentCalibrationTimerTimeOut(self):
-        if len(self.TrackingMartrixs)>0:
-            target2AHAT=self.TrackingMartrixs[0]
-            theta=[self.registerXangleData*3.1415/180,self.registerYangleData*3.1415/180,self.registerZangleData*3.1415/180]
-            R_x = np.array([[1,         0,                  0                   ],
-                    [0,         math.cos(theta[0]), -math.sin(theta[0]) ],
-                    [0,         math.sin(theta[0]), math.cos(theta[0])  ]
-                    ])            
-            R_y = np.array([[math.cos(theta[1]),    0,      math.sin(theta[1])  ],
-                            [0,                     1,      0                   ],
-                            [-math.sin(theta[1]),   0,      math.cos(theta[1])  ]
-                            ])
-                        
-            R_z = np.array([[math.cos(theta[2]),    -math.sin(theta[2]),    0],
-                            [math.sin(theta[2]),    math.cos(theta[2]),     0],
-                            [0,                     0,                      1]
-                            ])
-            R=np.diag([1.,1.,1.,1.])
-            R[0:3,0:3]=R_z@R_y@R_x
-            R[0][3]=self.registerDataX
-            R[1][3]=self.registerDataY
-            R[2][3]=self.registerDataZ
-            print(R)
-            HololensPos=self.HololensUnityDisplayController.GetHololensPosition()
-            trans=np.array([HololensPos[0],-HololensPos[1],HololensPos[2]])*1000
-            quat=np.array([HololensPos[3],-HololensPos[4],HololensPos[5],-HololensPos[6]])
-            rota=RigidTransform(quat,trans)
-            rs_holo_matrix=np.zeros((4,4))
-            rs_holo_matrix[0:3,0:3]=rota.rotation
-            rs_holo_matrix[0:3,3]=rota.translation
-            rs_holo_matrix[3,3]=1
-            
-            TargetPos=rs_holo_matrix@R@np.linalg.inv(self.LF2AHAT)@target2AHAT
-            TargetPos=rs_holo_matrix@R@target2AHAT
-            self.HololensUnityDisplayController.SetPosition(6,TargetPos)
-
-        else:
-            QThread.msleep(20)
 
     def AHATExperimentCalibrationTrackingDataReceivedCallback(self,info):
         if self.KalmanFilterStatus:
@@ -819,14 +557,7 @@ class MainDialog(QtWidgets.QMainWindow, Ui_MainWindow):
         return (True,ToolNames,ToolShapes)
 
     
-    def OnAHATExperimentClearViewButtonClicked(self):
-        TransformMatrix=np.diag([1,1,1,1])
-        TransformMatrix[0,3]=0
-        TransformMatrix[1,3]=0
-        TransformMatrix[2,3]=-10000
-        for i in range(7):
-            self.HololensUnityDisplayController.SetPosition(i,TransformMatrix)
-            time.sleep(1/20)
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
