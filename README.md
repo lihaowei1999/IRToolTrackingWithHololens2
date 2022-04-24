@@ -1,6 +1,6 @@
 # IRToolTrackingWithHololens2
 
-This is a multi-threaded holoLens 2 sensor data transfer system, implemented in Python via TCP socket connection, enabled the acquisition of the sensors' data at a high frame rate and with low latency.
+This is a multi-threaded holoLens 2 sensor data transfer system, implemented in Python via TCP socket connection, enabled the acquisition of the sensors' data at a high frame rate and with low latency. 
 
 ## Installing
 We suggest using a virtual python environmnet. Here we provide an instruction based on conda.
@@ -17,7 +17,8 @@ pip install -r requirements.txt
 cd UI_python
 python main.py
 ```
-
+- The code is tested on Ubuntu 20.04 and window 10. There remains to be some bugs for windows 10, but should run well for ubuntu
+ 
 ## UI
 ### Connection to Hololens2 Sensors
 - Keep Hololens and PC in one subnet, set the ip of PC as `192.168.1.29`
