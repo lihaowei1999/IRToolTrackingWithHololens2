@@ -1,7 +1,7 @@
 from ast import Str
 from asyncio.log import logger
 import logging
-from signal import pthread_kill
+# from signal import pthread_kill
 import sys
 import os
 from numpy.core.defchararray import lower
