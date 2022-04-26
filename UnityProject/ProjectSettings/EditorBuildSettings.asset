@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/HL2ToolTracking.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
+  m_configObjects:
+    Unity.XR.WindowsMR.Settings: {fileID: 11400000, guid: bb4252a5e381ece489c3977c79555c69,
+      type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 8544edd08f125de429cab337f72f0e42,
+      type: 2}
