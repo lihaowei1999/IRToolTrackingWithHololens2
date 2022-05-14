@@ -1,0 +1,83 @@
+namespace HL2UnityPlugin
+{
+    runtimeclass HL2ResearchMode
+    {
+        HL2ResearchMode();
+
+        UInt16 GetCenterDepth();
+        UInt8[] GetDepthMapBuffer();
+        UInt8[] GetDepthMapTextureBuffer();
+        UInt8[] GetShortAbImageBuffer();
+        Single[] GetPointCloudBuffer();
+
+        UInt8[] GetLongDepthMapBuffer();
+        UInt8[] GetLongDepthMapTextureBuffer();
+
+		UInt8[] GetLFCameraBuffer();
+		UInt8[] GetRFCameraBuffer();
+        UInt8[] GetLLCameraBuffer();
+        UInt8[] GetRRCameraBuffer();
+
+        UInt8[] GetPVCameraBuffer();
+
+        Single[] GetCenterPoint();
+        Single[] GetShortThrowLUT();
+        Single[] GetLongThrowLUT();
+        Single[] GetPVFloatBuffer();
+        Single[] GetAhatTransformBuffer();
+        Single[] GetRigTransformBuffer();
+        Single[] GetIMUSample();
+        Single[] GetArucoCornersStereo(Int32 id);
+
+        INT64 GetPVTimestamp();
+        INT64 GetLongDepthTimestamp();
+        INT64 GetShortDepthTimestamp();
+        INT64 GetIMUTimestamp();
+
+        Int32 GetDepthBufferSize();
+        Int32 GetLongDepthBufferSize();
+        String PrintDepthResolution();
+        String PrintDepthExtrinsics();
+        String PrintLongDepthExtrinsics();
+		String PrintSpatialCameraResolution();
+		String PrintLFExtrinsics();
+		String PrintRFExtrinsics();
+        String PrintLLExtrinsics();
+        String PrintRRExtrinsics();
+        String PrintPVIntrinsics();
+
+        Boolean DepthMapUpdated();
+        Boolean DepthMapTextureUpdated();
+        Boolean PointCloudUpdated();
+        Boolean LongDepthMapTextureUpdated();
+        Boolean LongDepthMapUpdated();
+		Boolean LFImageUpdated();
+		Boolean RFImageUpdated();
+        Boolean LLImageUpdated();
+        Boolean RRImageUpdated();
+        Boolean PVImageUpdated();
+        Boolean LongThrowLUTUpdated();
+        Boolean ShortThrowLUTUpdated();
+        Boolean IMUSampleUpdated();
+
+        void InitializeDepthSensor();
+        void InitializeLongDepthSensor();
+        void InitializeSpatialCamerasFront();
+        void InitializeSpatialCamerasAll();
+        void InitializeIMUSensor();
+        Windows.Foundation.IAsyncAction InitializePVCamera();
+        void InitializeArucoTrackingStereo();
+
+        void StartDepthSensorLoop(Boolean reconstructPointCloud);
+        void StartLongDepthSensorLoop();
+		void StartSpatialCamerasFrontLoop();
+        void StartSpatialCamerasAllLoop();
+        void StartIMUSensorLoop();
+
+        Windows.Foundation.IAsyncAction StopAllSensorDevice();
+
+        void SetReferenceCoordinateSystem(Windows.Perception.Spatial.SpatialCoordinateSystem refCoord);
+        void SetPointCloudRoiInSpace(Single centerX, Single centerY, Single centerZ, Single boundX, Single boundY, Single boundZ);
+        void SetPointCloudDepthOffset(UInt16 offset);
+    }
+}
