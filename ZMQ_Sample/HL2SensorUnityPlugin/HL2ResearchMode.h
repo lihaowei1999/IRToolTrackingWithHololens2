@@ -25,6 +25,8 @@
 #include <opencv2/core.hpp>
 #include <opencv2/aruco.hpp>
 #include <opencv2/core/mat.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgcodecs/imgcodecs.hpp>
 #include <Eigen/Eigen>
 
 namespace winrt::HL2UnityPlugin::implementation
@@ -70,7 +72,7 @@ namespace winrt::HL2UnityPlugin::implementation
         void InitializeSpatialCamerasFront();
         void InitializeSpatialCamerasAll();
         void InitializeIMUSensor();
-        winrt::Windows::Foundation::IAsyncAction InitializePVCamera();
+        winrt::Windows::Foundation::IAsyncAction InitializePVCamera(int width = 960);
         winrt::Windows::Foundation::IAsyncAction InitializePVCameraAsync();
         void InitializeArucoTrackingStereo();
 
@@ -104,8 +106,9 @@ namespace winrt::HL2UnityPlugin::implementation
         com_array<uint8_t> GetShortAbImageBuffer();
         com_array<uint8_t> GetLongDepthMapBuffer();
         com_array<uint8_t> GetLongDepthMapTextureBuffer();
-		com_array<uint8_t> GetLFCameraBuffer();
-		com_array<uint8_t> GetRFCameraBuffer();
+        com_array<uint8_t> GetLFCameraBuffer(int64_t& ts, bool withExtrinsics = false);
+        com_array<uint8_t> GetRFCameraBuffer(int64_t& ts, bool withExtrinsics = false);
+        com_array<uint8_t> GetLRFCameraBuffer(int64_t& ts_left, int64_t& ts_right, bool withExtrinsics = false);
         com_array<uint8_t> GetLLCameraBuffer();
         com_array<uint8_t> GetRRCameraBuffer();
         com_array<uint8_t> GetPVCameraBuffer();
@@ -122,6 +125,8 @@ namespace winrt::HL2UnityPlugin::implementation
         INT64 GetShortDepthTimestamp();
         INT64 GetIMUTimestamp();
         com_array<float> GetArucoCornersStereo(int id);
+        float GetSpatialLfFps();
+        float GetSpatialRfFps();
 
     protected:
         void OnFrameArrived(const winrt::Windows::Media::Capture::Frames::MediaFrameReader& sender,
@@ -141,8 +146,6 @@ namespace winrt::HL2UnityPlugin::implementation
         UINT8* m_shortAbImage = nullptr;
         UINT8* m_longDepthMap = nullptr;
         UINT8* m_longDepthMapTexture = nullptr;
-		UINT8* m_LFImage = nullptr;
-		UINT8* m_RFImage = nullptr;
         UINT8* m_LLImage = nullptr;
         UINT8* m_RRImage = nullptr;
         UINT8* m_PVImage = nullptr;
@@ -174,7 +177,6 @@ namespace winrt::HL2UnityPlugin::implementation
         std::atomic_int m_depthBufferSize, m_shortAbImageBufferSize = 0;
         std::atomic_int m_longDepthBufferSize = 0;
         std::atomic_int m_spatialBufferSize = 0;
-        std::atomic_int m_RFbufferSize = 0;
         std::atomic_int m_PVbufferSize = 0;
         std::atomic_uint16_t m_centerDepth = 0;
         float m_centerPoint[3]{ 0,0,0 };
@@ -252,7 +254,7 @@ namespace winrt::HL2UnityPlugin::implementation
         winrt::Windows::Media::Capture::MediaCapture mediaCapture = nullptr;
         winrt::Windows::Media::Capture::Frames::MediaFrameReader m_mediaFrameReader = nullptr;
         winrt::event_token m_OnFrameArrivedRegistration;
-        const int kImageWidth = 960;
+        int kImageWidth = 960;
         const wchar_t kSensorName[3] = L"PV";
         std::stringstream m_PVCameraIntrinsics;
         std::map<int32_t, TrackedMarkerStereo> m_arucoResult;
@@ -266,11 +268,29 @@ namespace winrt::HL2UnityPlugin::implementation
         long long m_latestPVTimestamp = 0;
         long long m_latestIMUTimestamp = 0;
         winrt::Windows::Media::Capture::Frames::MediaFrameReference m_latestFrame = nullptr;
+        std::atomic_bool m_pvFrameArrived = false;
 
         // writing thread
         static void CameraWriteThread(HL2ResearchMode* pProcessor);
         std::thread* m_pWriteThread = nullptr;
         bool m_fExit = false;
+
+        struct Frame {
+            UINT64 timestamp; // QPC 
+            int64_t timestamp_ft; // FileTime
+            UINT8* image = nullptr;
+            float* extrin = nullptr;
+        };
+
+        struct SpatialCameraFrame {
+            Frame LFFrame;
+            Frame RFFrame;
+            Frame LLFrame;
+            Frame RRFrame;
+        } m_lastSpatialFrame;
+
+        std::atomic<float> spatialLfFps, spatialRfFps = 0.0;
+        UINT64 lastLfTs, lastRfTs = 0;
     };
 }
 namespace winrt::HL2UnityPlugin::factory_implementation

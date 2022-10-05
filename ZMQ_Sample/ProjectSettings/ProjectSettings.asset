@@ -595,11 +595,11 @@ PlayerSettings:
   m_MobileRenderingPath: 1
   metroPackageName: HL2ToolTrack
   metroPackageVersion: 1.0.0.0
-  metroCertificatePath: C:\HoloLensForCV-Unity\IRToolTracking\ZMQ_Sample\Assets\WSATestCertificate.pfx
+  metroCertificatePath: Assets/WSATestCertificate.pfx
   metroCertificatePassword: 
   metroCertificateSubject: DefaultCompany
   metroCertificateIssuer: DefaultCompany
-  metroCertificateNotAfter: 000b3e0a57d0d801
+  metroCertificateNotAfter: 00d2ef671c89d901
   metroApplicationDescription: HL2ToolTrack
   wsaImages: {}
   metroTileShortName: 

@@ -7,17 +7,22 @@ namespace PubSub
 {
     public class UIManager : MonoBehaviour
     {
+        [SerializeField] private string HostIP;
         [SerializeField] private Interactable sensorSwitch, previewToggle;
         [SerializeField] private TextMeshPro messageBox;
         [SerializeField] private ResearchModeVideoStream researchMode;
         [SerializeField] private IRToolTrack.IRToolController toolTarget;
 
-        private Subscriber sub;
         private Publisher pub;
         private ReqRep.Client reqClient;
+
+        private void Awake()
+        {
+            HostIPManager.SetHostIP(HostIP);
+        }
+
         private void Start()
         {
-            sub = GetComponent<Subscriber>();
             pub = GetComponent<Publisher>();
             reqClient = GetComponent<ReqRep.Client>();
 
@@ -34,9 +39,11 @@ namespace PubSub
             {
                 sensorSwitch.IsEnabled = false;
                 pub.StartDataPublisher();
-                reqClient.StartClient();
+                reqClient.StartClient(); 
+                DebugConsole.Log("Starting tool tracking");
                 toolTarget.StartTracking();
-                researchMode.StartSensorsEvent();
+                DebugConsole.Log("Starting sensors");
+                researchMode.StartToolTracking();
                 Invoke("ActivateSensorSwitch", 2.0f);
             }
             else

@@ -7,11 +7,12 @@ Change `Host` field of `MixedRealitySceneContent/Menu`'s `Client` component and 
 
 ## Python
 ```
-pip install pyzmq
+pip install pyzmq open3d
 ```
 - Update the IP address to HoloLens IP in the following line of `PythonServer/main.py`'s `main()` function:
   ```python
-  receive_depth("[HoloLens IP address]", args.path)
+  parser.add_argument('--ip', default='[HoloLens IP]',
+                        help='IP address of the HoloLens')
   ```
 - Update the tools in `PythonServer/IRTrack/ToolList` folder accordingly. 
 
@@ -19,7 +20,7 @@ pip install pyzmq
 - On laptop, activate the conda environment.
   ```
   cd PythonServer
-  python main.py --path tool
+  python main.py --ip [HoloLens IP]
   ```
 - On HoloLens, open tha app and raise you left palm. Click the `IR Tracking` toggle on the hand menu to start tracking.
 - Click `Toggle Preview` button on hand menu to toggle the preview of AHAT camera frame on HoloLens.

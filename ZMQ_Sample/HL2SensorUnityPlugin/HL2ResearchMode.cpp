@@ -198,8 +198,9 @@ namespace winrt::HL2UnityPlugin::implementation
         m_startArucoTrackingStereo = true;
     }
 
-    winrt::Windows::Foundation::IAsyncAction HL2ResearchMode::InitializePVCamera()
+    winrt::Windows::Foundation::IAsyncAction HL2ResearchMode::InitializePVCamera(int width)
     {
+        kImageWidth = width;
         co_await HL2ResearchMode::InitializePVCameraAsync();
     }
 
@@ -220,23 +221,14 @@ namespace winrt::HL2UnityPlugin::implementation
             {
                 for (auto knownDesc : knownProfile.SupportedRecordMediaDescription())
                 {
-                    std::stringstream ss;
-                    ss << "Resolution: " << knownDesc.Width() << "x" << knownDesc.Height() << "@" << knownDesc.FrameRate() << "fps\n" ;
-                    std::string msg = ss.str();
-                    std::wstring widemsg = std::wstring(msg.begin(), msg.end());
-                    OutputDebugString(widemsg.c_str());
-                }
-            }
-        }
-        for (const MediaFrameSourceGroup& mediaFrameSourceGroup : mediaFrameSourceGroups)
-        {
-            auto knownProfiles = MediaCapture::FindKnownVideoProfiles(mediaFrameSourceGroup.Id(), KnownVideoProfile::VideoConferencing);
-            for (const auto& knownProfile : knownProfiles)
-            {
-                for (auto knownDesc : knownProfile.SupportedRecordMediaDescription())
-                {
-                    if ((knownDesc.Width() == kImageWidth)) // && (std::round(knownDesc.FrameRate()) == 15))
+                    if ((knownDesc.Width() == kImageWidth) && (std::round(knownDesc.FrameRate()) == 30))
                     {
+                        std::stringstream ss;
+                        ss << "Selected: " << knownDesc.Width() << "x" << knownDesc.Height() << "@" << knownDesc.FrameRate() << "fps\n";
+                        std::string msg = ss.str();
+                        std::wstring widemsg = std::wstring(msg.begin(), msg.end());
+                        OutputDebugString(widemsg.c_str());
+
                         profile = knownProfile;
                         desc = knownDesc;
                         selectedSourceGroup = mediaFrameSourceGroup;
@@ -246,7 +238,6 @@ namespace winrt::HL2UnityPlugin::implementation
             }
         }
         winrt::check_bool(selectedSourceGroup != nullptr);
-
         for (auto sourceInfo : selectedSourceGroup.SourceInfos())
         {
             // Workaround since multiple Color sources can be found,
@@ -257,7 +248,6 @@ namespace winrt::HL2UnityPlugin::implementation
             }
         }
         winrt::check_bool(!selectedSourceInfos.empty());
-
         // Initialize a MediaCapture object
         MediaCaptureInitializationSettings settings;
         settings.VideoProfile(profile);
@@ -265,12 +255,10 @@ namespace winrt::HL2UnityPlugin::implementation
         settings.VideoDeviceId(selectedSourceGroup.Id());
         settings.StreamingCaptureMode(StreamingCaptureMode::Video);
         settings.MemoryPreference(MediaCaptureMemoryPreference::Cpu);
-        settings.SharingMode(MediaCaptureSharingMode::SharedReadOnly);
+        settings.SharingMode(MediaCaptureSharingMode::ExclusiveControl);
         settings.SourceGroup(selectedSourceGroup);
-
         mediaCapture = MediaCapture();
         co_await mediaCapture.InitializeAsync(settings);
-
         //co_await mediaCapture.VideoDeviceController().ExposureControl().SetAutoAsync(false);
 
         MediaFrameSource selectedSource = nullptr;
@@ -289,13 +277,10 @@ namespace winrt::HL2UnityPlugin::implementation
                 }
             }
         }
-
         winrt::check_bool(preferredFormat != nullptr);
-
         co_await selectedSource.SetFormatAsync(preferredFormat);
         m_mediaFrameReader = co_await mediaCapture.CreateFrameReaderAsync(selectedSource);
         auto status = co_await m_mediaFrameReader.StartAsync();
-
         winrt::check_bool(status == MediaFrameReaderStartStatus::Success);
 
         // reserve for 10 seconds at 30fps
@@ -307,14 +292,19 @@ namespace winrt::HL2UnityPlugin::implementation
     void HL2ResearchMode::CameraWriteThread(HL2ResearchMode* pHL2ResearchMode)
     {
         long long last_timestamp_rel = 0;
-        
 
         while (!pHL2ResearchMode->m_fExit)
         {
-            //std::lock_guard<std::mutex> guard(pHL2ResearchMode->m_storageMutex);
+            if (!pHL2ResearchMode->m_pvFrameArrived)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));    // sleep for 0.01 second
+                continue;
+            }
+            pHL2ResearchMode->m_pvFrameArrived = false;
+
             SoftwareBitmap softwareBitmap = nullptr;
             SpatialCoordinateSystem imgCoord = nullptr;
-            float fx, fy = 0;
+            float fx, fy, px, py = 0;
             {
                 std::shared_lock<std::shared_mutex> lock(pHL2ResearchMode->m_frameMutex);
                 if (pHL2ResearchMode->m_latestFrame == nullptr) continue;
@@ -336,9 +326,11 @@ namespace winrt::HL2UnityPlugin::implementation
 
                 fx = frame.VideoMediaFrame().CameraIntrinsics().FocalLength().x;
                 fy = frame.VideoMediaFrame().CameraIntrinsics().FocalLength().y;
+                px = frame.VideoMediaFrame().CameraIntrinsics().PrincipalPoint().x;
+                py = frame.VideoMediaFrame().CameraIntrinsics().PrincipalPoint().y;
 
                 imgCoord = frame.CoordinateSystem();
-                if (fx == 0 || fy == 0) return;
+                if (fx == 0 || fy == 0 || imgCoord == nullptr) return;
             }
             // Compose buffer bitmap with timesatmp, transform and focal length
             if (softwareBitmap != nullptr)
@@ -354,12 +346,14 @@ namespace winrt::HL2UnityPlugin::implementation
                 winrt::check_hresult(spMemoryBufferByteAccess->GetBuffer(&pixelBufferData, &pixelBufferDataLength));
                 pHL2ResearchMode->m_PVbufferSize = pixelBufferDataLength;
 
-                // Create float contatiner for 3 x 4 transform and fx, fy
-                std::vector<float> floatContainer(14);
+                // Create float contatiner for fx, fy, px, py and 3 x 4 transform
+                std::vector<float> floatContainer(16);
                 auto pFloatContainer = floatContainer.data();
 
                 *pFloatContainer++ = fx;
                 *pFloatContainer++ = fy;
+                *pFloatContainer++ = px;
+                *pFloatContainer++ = py;
                 
                 auto PVtoWorld = imgCoord.TryGetTransformTo(pHL2ResearchMode->m_refFrame);
                 if (PVtoWorld)
@@ -397,11 +391,12 @@ namespace winrt::HL2UnityPlugin::implementation
                     if (!pHL2ResearchMode->m_floatContainer)
                     {
                         OutputDebugString(L"Create Space for float container...\n");
-                        pHL2ResearchMode->m_floatContainer = new float[14];
+                        pHL2ResearchMode->m_floatContainer = new float[16];
                     }
                     memcpy(pHL2ResearchMode->m_floatContainer, floatContainer.data(), floatContainer.size() * sizeof(float));
                     pHL2ResearchMode->m_containerLength = floatContainer.size();
                 }
+                softwareBitmap.Close();
                 pHL2ResearchMode->m_PVImageUpdated = true;
             }
         }
@@ -414,6 +409,7 @@ namespace winrt::HL2UnityPlugin::implementation
             if (frame == nullptr) return;
             std::unique_lock<std::shared_mutex> lock(m_frameMutex);
             m_latestFrame = frame;
+            m_pvFrameArrived = true;
         }
     }
 
@@ -424,10 +420,47 @@ namespace winrt::HL2UnityPlugin::implementation
         {
             std::unique_lock<std::shared_mutex> l(mu);
             m_refFrame = m_locator.GetDefault().CreateStationaryFrameOfReferenceAtCurrentLocation().CoordinateSystem();
-            m_reconstructShortThrowPointCloud = true;
         }
 
-        m_pDepthUpdateThread = new std::thread(HL2ResearchMode::DepthSensorLoop, this);
+        m_reconstructShortThrowPointCloud = reconstructPointCloud;
+
+        HRESULT hr = S_OK;
+        DWORD waitResult = WaitForSingleObject(camConsentGiven, INFINITE);
+        if (waitResult == WAIT_OBJECT_0)
+        {
+            switch (camAccessCheck)
+            {
+            case ResearchModeSensorConsent::Allowed:
+                OutputDebugString(L"Access is granted");
+                break;
+            case ResearchModeSensorConsent::DeniedBySystem:
+                OutputDebugString(L"Access is denied by the system");
+                hr = E_ACCESSDENIED;
+                break;
+            case ResearchModeSensorConsent::DeniedByUser:
+                OutputDebugString(L"Access is denied by the user");
+                hr = E_ACCESSDENIED;
+                break;
+            case ResearchModeSensorConsent::NotDeclaredByApp:
+                OutputDebugString(L"Capability is not declared in the app manifest");
+                hr = E_ACCESSDENIED;
+                break;
+            case ResearchModeSensorConsent::UserPromptRequired:
+                OutputDebugString(L"Capability user prompt required");
+                hr = E_ACCESSDENIED;
+                break;
+            default:
+                OutputDebugString(L"Access is denied by the system");
+                hr = E_ACCESSDENIED;
+                break;
+            }
+        }
+        else
+        {
+            hr = E_UNEXPECTED;
+        }
+
+        if (SUCCEEDED(hr)) m_pDepthUpdateThread = new std::thread(HL2ResearchMode::DepthSensorLoop, this);
     }
 
     void HL2ResearchMode::DepthSensorLoop(HL2ResearchMode* pHL2ResearchMode)
@@ -439,7 +472,6 @@ namespace winrt::HL2UnityPlugin::implementation
 
         OutputDebugString(L"Opening Depth Stream...\n");
         winrt::check_hresult(pHL2ResearchMode->m_depthSensor->OpenStream());
-        OutputDebugString(L"Opened Depth Stream\n");
 
         try 
         {
@@ -449,6 +481,16 @@ namespace winrt::HL2UnityPlugin::implementation
                 IResearchModeSensorFrame* pDepthSensorFrame = nullptr;
                 ResearchModeSensorResolution resolution;
                 pHL2ResearchMode->m_depthSensor->GetNextBuffer(&pDepthSensorFrame);
+
+                ResearchModeSensorTimestamp timestamp;
+                pDepthSensorFrame->GetTimeStamp(&timestamp);
+
+                if (timestamp.HostTicks == lastTs)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));    // sleep for 0.01 second
+                    continue;
+                }
+                lastTs = timestamp.HostTicks;
                 
                 // process sensor frame
                 pDepthSensorFrame->GetResolution(&resolution);
@@ -469,12 +511,6 @@ namespace winrt::HL2UnityPlugin::implementation
                 std::vector<float> pointCloud;
 
                 // get tracking transform
-                ResearchModeSensorTimestamp timestamp;
-                pDepthSensorFrame->GetTimeStamp(&timestamp);
-
-                if (timestamp.HostTicks == lastTs) continue;
-                lastTs = timestamp.HostTicks;
-
                 auto ts = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp.HostTicks)));
                 auto transToWorld = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts, pHL2ResearchMode->m_refFrame);
                 if (transToWorld == nullptr) continue;
@@ -1088,41 +1124,177 @@ namespace winrt::HL2UnityPlugin::implementation
                 const BYTE* pRRImage = nullptr;
                 pRRFrame->GetBuffer(&pRRImage, &outBufferCount);
 
+                // get tracking transform
+                ResearchModeSensorTimestamp timestamp_ll, timestamp_lf, timestamp_rf, timestamp_rr;
+                pLFCameraFrame->GetTimeStamp(&timestamp_lf);
+                pRFCameraFrame->GetTimeStamp(&timestamp_rf);
+                pLLCameraFrame->GetTimeStamp(&timestamp_ll);
+                pRRCameraFrame->GetTimeStamp(&timestamp_rr);
+
+                auto ts_lf = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_lf.HostTicks)));
+                auto ts_rf = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_rf.HostTicks)));
+                auto ts_ll = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_lf.HostTicks)));
+                auto ts_rr = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_rf.HostTicks)));
+
+                auto rigToWorld_lf = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts_lf, pHL2ResearchMode->m_refFrame);
+                auto rigToWorld_rf = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts_rf, pHL2ResearchMode->m_refFrame);
+                auto rigToWorld_ll = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts_ll, pHL2ResearchMode->m_refFrame);;
+                auto rigToWorld_rr = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts_rr, pHL2ResearchMode->m_refFrame);;
+                
+
+                if (rigToWorld_lf == nullptr || rigToWorld_rf == nullptr || rigToWorld_ll == nullptr || rigToWorld_rr == nullptr)
+                {
+                    continue;
+                }
+
+                auto LfToWorld = pHL2ResearchMode->m_LFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_lf);
+                auto RfToWorld = pHL2ResearchMode->m_RFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_rf);
+                auto LlToWorld = pHL2ResearchMode->m_LLCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_ll);
+                auto RrToWorld = pHL2ResearchMode->m_RRCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_rr);
+
+                std::vector<float> LfExtrin(12);
+                std::vector<float> RfExtrin(12);
+                std::vector<float> LlExtrin(12);
+                std::vector<float> RrExtrin(12);
+                auto pLfExtrin = LfExtrin.data();
+                auto pRfExtrin = RfExtrin.data();
+                auto pLlExtrin = LlExtrin.data();
+                auto pRrExtrin = RrExtrin.data();
+
+                // Rotation - left front
+                *pLfExtrin++ = LfToWorld._11;
+                *pLfExtrin++ = LfToWorld._12;
+                *pLfExtrin++ = LfToWorld._13;
+                *pLfExtrin++ = LfToWorld._21;
+                *pLfExtrin++ = LfToWorld._22;
+                *pLfExtrin++ = LfToWorld._23;
+                *pLfExtrin++ = LfToWorld._31;
+                *pLfExtrin++ = LfToWorld._32;
+                *pLfExtrin++ = LfToWorld._33;
+                // Translation - left front
+                *pLfExtrin++ = LfToWorld._41;
+                *pLfExtrin++ = LfToWorld._42;
+                *pLfExtrin++ = LfToWorld._43;
+
+                // Rotation - right front
+                *pRfExtrin++ = RfToWorld._11;
+                *pRfExtrin++ = RfToWorld._12;
+                *pRfExtrin++ = RfToWorld._13;
+                *pRfExtrin++ = RfToWorld._21;
+                *pRfExtrin++ = RfToWorld._22;
+                *pRfExtrin++ = RfToWorld._23;
+                *pRfExtrin++ = RfToWorld._31;
+                *pRfExtrin++ = RfToWorld._32;
+                *pRfExtrin++ = RfToWorld._33;
+                // Translation - right front
+                *pRfExtrin++ = RfToWorld._41;
+                *pRfExtrin++ = RfToWorld._42;
+                *pRfExtrin++ = RfToWorld._43;
+
+                // Rotation - left left
+                *pLlExtrin++ = LlToWorld._11;
+                *pLlExtrin++ = LlToWorld._12;
+                *pLlExtrin++ = LlToWorld._13;
+                *pLlExtrin++ = LlToWorld._21;
+                *pLlExtrin++ = LlToWorld._22;
+                *pLlExtrin++ = LlToWorld._23;
+                *pLlExtrin++ = LlToWorld._31;
+                *pLlExtrin++ = LlToWorld._32;
+                *pLlExtrin++ = LlToWorld._33;
+                // Translation - left left
+                *pLlExtrin++ = LlToWorld._41;
+                *pLlExtrin++ = LlToWorld._42;
+                *pLlExtrin++ = LlToWorld._43;
+
+                // Rotation - right right
+                *pRrExtrin++ = RrToWorld._11;
+                *pRrExtrin++ = RrToWorld._12;
+                *pRrExtrin++ = RrToWorld._13;
+                *pRrExtrin++ = RrToWorld._21;
+                *pRrExtrin++ = RrToWorld._22;
+                *pRrExtrin++ = RrToWorld._23;
+                *pRrExtrin++ = RrToWorld._31;
+                *pRrExtrin++ = RrToWorld._32;
+                *pRrExtrin++ = RrToWorld._33;
+                // Translation - right right
+                *pRrExtrin++ = RrToWorld._41;
+                *pRrExtrin++ = RrToWorld._42;
+                *pRrExtrin++ = RrToWorld._43;
+
                 // save data
                 {
                     std::unique_lock<std::shared_mutex> l(pHL2ResearchMode->mu);
+
+                    pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp = timestamp_lf.HostTicks;
+                    pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp = timestamp_rf.HostTicks;
+                    pHL2ResearchMode->m_lastSpatialFrame.LLFrame.timestamp = timestamp_ll.HostTicks;
+                    pHL2ResearchMode->m_lastSpatialFrame.RRFrame.timestamp = timestamp_rr.HostTicks;
+
+                    pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp_ft = ts_lf.TargetTime().time_since_epoch().count();
+                    pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp_ft = ts_rf.TargetTime().time_since_epoch().count();
+                    pHL2ResearchMode->m_lastSpatialFrame.LLFrame.timestamp_ft = ts_ll.TargetTime().time_since_epoch().count();
+                    pHL2ResearchMode->m_lastSpatialFrame.RRFrame.timestamp_ft = ts_rr.TargetTime().time_since_epoch().count();
 
                     pHL2ResearchMode->m_SpatialCameraResolution = resolution;
                     pHL2ResearchMode->m_spatialBufferSize = outBufferCount;
 
                     // save images
-                    if (!pHL2ResearchMode->m_LFImage)
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image)
                     {
                         OutputDebugString(L"Create Space for Left Front Image...\n");
-                        pHL2ResearchMode->m_LFImage = new UINT8[outBufferCount];
+                        pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image = new UINT8[outBufferCount];
                     }
-                    memcpy(pHL2ResearchMode->m_LFImage, pLFImage, outBufferCount * sizeof(UINT8));
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image, pLFImage, outBufferCount * sizeof(UINT8));
 
-                    if (!pHL2ResearchMode->m_RFImage)
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image)
                     {
                         OutputDebugString(L"Create Space for Right Front Image...\n");
-                        pHL2ResearchMode->m_RFImage = new UINT8[outBufferCount];
+                        pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image = new UINT8[outBufferCount];
                     }
-                    memcpy(pHL2ResearchMode->m_RFImage, pRFImage, outBufferCount * sizeof(UINT8));
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image, pRFImage, outBufferCount * sizeof(UINT8));
 
-                    if (!pHL2ResearchMode->m_LLImage)
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.LLFrame.image)
                     {
                         OutputDebugString(L"Create Space for Left Left Image...\n");
-                        pHL2ResearchMode->m_LLImage = new UINT8[outBufferCount];
+                        pHL2ResearchMode->m_lastSpatialFrame.LLFrame.image = new UINT8[outBufferCount];
                     }
-                    memcpy(pHL2ResearchMode->m_LLImage, pLLImage, outBufferCount * sizeof(UINT8));
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.LLFrame.image, pLLImage, outBufferCount * sizeof(UINT8));
 
-                    if (!pHL2ResearchMode->m_RRImage)
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.RRFrame.image)
                     {
                         OutputDebugString(L"Create Space for Right Right Image...\n");
-                        pHL2ResearchMode->m_RRImage = new UINT8[outBufferCount];
+                        pHL2ResearchMode->m_lastSpatialFrame.RRFrame.image = new UINT8[outBufferCount];
                     }
-                    memcpy(pHL2ResearchMode->m_RRImage, pRRImage, outBufferCount * sizeof(UINT8));
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RRFrame.image, pRRImage, outBufferCount * sizeof(UINT8));
+                    
+                    // Extrinsics
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.LFFrame.extrin)
+                    {
+                        OutputDebugString(L"Create Space for left-front extrinsics...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.LFFrame.extrin = new float[12];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.LFFrame.extrin, LfExtrin.data(), LfExtrin.size() * sizeof(float));
+
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin)
+                    {
+                        OutputDebugString(L"Create Space for right-front extrinsics...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin = new float[12];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin, RfExtrin.data(), RfExtrin.size() * sizeof(float));
+                    
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.LLFrame.extrin)
+                    {
+                        OutputDebugString(L"Create Space for left-left extrinsics...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.LLFrame.extrin = new float[12];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.LLFrame.extrin, LlExtrin.data(), LlExtrin.size() * sizeof(float));
+
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.RRFrame.extrin)
+                    {
+                        OutputDebugString(L"Create Space for right-right extrinsics...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.RRFrame.extrin = new float[12];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RRFrame.extrin, RrExtrin.data(), RrExtrin.size() * sizeof(float));
                 }
                 pHL2ResearchMode->m_LFImageUpdated = true;
                 pHL2ResearchMode->m_RFImageUpdated = true;
@@ -1193,57 +1365,186 @@ namespace winrt::HL2UnityPlugin::implementation
                 ResearchModeSensorResolution RFResolution;
                 pHL2ResearchMode->m_LFSensor->GetNextBuffer(&pLFCameraFrame);
 				pHL2ResearchMode->m_RFSensor->GetNextBuffer(&pRFCameraFrame);
-                if (pHL2ResearchMode->m_startArucoTrackingStereo)
+                /*if (pHL2ResearchMode->m_startArucoTrackingStereo)
                 {
                     auto arucoResult = pHL2ResearchMode->TrackArUcoMarkersStereo(pLFCameraFrame, pRFCameraFrame);
                     std::unique_lock<std::shared_mutex> lock(pHL2ResearchMode->m_arucoMutex);
                     pHL2ResearchMode->m_arucoResult = arucoResult;
+                }*/
+
+                // process sensor frame
+                pLFCameraFrame->GetResolution(&LFResolution);
+                pHL2ResearchMode->m_SpatialCameraResolution = LFResolution;
+                pRFCameraFrame->GetResolution(&RFResolution);
+
+                IResearchModeSensorVLCFrame* pLFFrame = nullptr;
+                winrt::check_hresult(pLFCameraFrame->QueryInterface(IID_PPV_ARGS(&pLFFrame)));
+                IResearchModeSensorVLCFrame* pRFFrame = nullptr;
+                winrt::check_hresult(pRFCameraFrame->QueryInterface(IID_PPV_ARGS(&pRFFrame)));
+
+                size_t LFOutBufferCount = 0;
+                const BYTE *pLFImage = nullptr;
+                pLFFrame->GetBuffer(&pLFImage, &LFOutBufferCount);
+                pHL2ResearchMode->m_spatialBufferSize = LFOutBufferCount;
+				size_t RFOutBufferCount = 0;
+				const BYTE *pRFImage = nullptr;
+				pRFFrame->GetBuffer(&pRFImage, &RFOutBufferCount);
+
+                // get tracking transform
+                ResearchModeSensorTimestamp timestamp_left, timestamp_right;
+                pLFCameraFrame->GetTimeStamp(&timestamp_left);
+                pRFCameraFrame->GetTimeStamp(&timestamp_right);
+
+                auto ts_left = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_left.HostTicks)));
+                auto ts_right = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_right.HostTicks)));
+
+                auto rigToWorld_l = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts_left, pHL2ResearchMode->m_refFrame);
+                auto rigToWorld_r = rigToWorld_l;
+                if (ts_left.TargetTime() != ts_right.TargetTime()) {
+                    rigToWorld_r = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts_right, pHL2ResearchMode->m_refFrame);
                 }
 
-    //            // process sensor frame
-    //            pLFCameraFrame->GetResolution(&LFResolution);
-    //            pHL2ResearchMode->m_LFResolution = LFResolution;
-    //            pRFCameraFrame->GetResolution(&RFResolution);
-    //            pHL2ResearchMode->m_RFResolution = RFResolution;
+                if (rigToWorld_l == nullptr || rigToWorld_r == nullptr)
+                {
+                    continue;
+                }
 
-    //            IResearchModeSensorVLCFrame* pLFFrame = nullptr;
-    //            winrt::check_hresult(pLFCameraFrame->QueryInterface(IID_PPV_ARGS(&pLFFrame)));
-    //            IResearchModeSensorVLCFrame* pRFFrame = nullptr;
-    //            winrt::check_hresult(pRFCameraFrame->QueryInterface(IID_PPV_ARGS(&pRFFrame)));
+                auto LfToWorld = pHL2ResearchMode->m_LFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_l);
+                auto RfToWorld = pHL2ResearchMode->m_RFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_r);
 
-    //            size_t LFOutBufferCount = 0;
-    //            const BYTE *pLFImage = nullptr;
-    //            pLFFrame->GetBuffer(&pLFImage, &LFOutBufferCount);
-    //            pHL2ResearchMode->m_spatialBufferSize = LFOutBufferCount;
-				//size_t RFOutBufferCount = 0;
-				//const BYTE *pRFImage = nullptr;
-				//pRFFrame->GetBuffer(&pRFImage, &RFOutBufferCount);
+                std::vector<float> LfExtrin(12);
+                std::vector<float> RfExtrin(12);
+                auto pLfExtrin = LfExtrin.data();
+                auto pRfExtrin = RfExtrin.data();
 
-    //            // save data
-    //            {
-    //                std::unique_lock<std::shared_mutex> l(pHL2ResearchMode->mu);
+                // Rotation - left
+                *pLfExtrin++ = LfToWorld._11;
+                *pLfExtrin++ = LfToWorld._12;
+                *pLfExtrin++ = LfToWorld._13;
+                *pLfExtrin++ = LfToWorld._21;
+                *pLfExtrin++ = LfToWorld._22;
+                *pLfExtrin++ = LfToWorld._23;
+                *pLfExtrin++ = LfToWorld._31;
+                *pLfExtrin++ = LfToWorld._32;
+                *pLfExtrin++ = LfToWorld._33;
+                // Translation - left
+                *pLfExtrin++ = LfToWorld._41;
+                *pLfExtrin++ = LfToWorld._42;
+                *pLfExtrin++ = LfToWorld._43;
 
-				//	// save LF and RF images
-				//	if (!pHL2ResearchMode->m_LFImage)
-				//	{
-				//		OutputDebugString(L"Create Space for Left Front Image...\n");
-				//		pHL2ResearchMode->m_LFImage = new UINT8[LFOutBufferCount];
-				//	}
-				//	memcpy(pHL2ResearchMode->m_LFImage, pLFImage, LFOutBufferCount * sizeof(UINT8));
+                // Rotation - right
+                *pRfExtrin++ = RfToWorld._11;
+                *pRfExtrin++ = RfToWorld._12;
+                *pRfExtrin++ = RfToWorld._13;
+                *pRfExtrin++ = RfToWorld._21;
+                *pRfExtrin++ = RfToWorld._22;
+                *pRfExtrin++ = RfToWorld._23;
+                *pRfExtrin++ = RfToWorld._31;
+                *pRfExtrin++ = RfToWorld._32;
+                *pRfExtrin++ = RfToWorld._33;
+                // Translation - right
+                *pRfExtrin++ = RfToWorld._41;
+                *pRfExtrin++ = RfToWorld._42;
+                *pRfExtrin++ = RfToWorld._43;
 
-				//	if (!pHL2ResearchMode->m_RFImage)
-				//	{
-				//		OutputDebugString(L"Create Space for Right Front Image...\n");
-				//		pHL2ResearchMode->m_RFImage = new UINT8[RFOutBufferCount];
-				//	}
-				//	memcpy(pHL2ResearchMode->m_RFImage, pRFImage, RFOutBufferCount * sizeof(UINT8));
-    //            }
-				//pHL2ResearchMode->m_LFImageUpdated = true;
-				//pHL2ResearchMode->m_RFImageUpdated = true;
+                // save data
+                {
+                    std::unique_lock<std::shared_mutex> l(pHL2ResearchMode->mu);
 
-    //            // release space
-				//if (pLFFrame) pLFFrame->Release();
-				//if (pRFFrame) pRFFrame->Release();
+                    if (pHL2ResearchMode->lastLfTs > 0)
+                    {
+                        pHL2ResearchMode->spatialLfFps = 1e7 / (double)(timestamp_left.HostTicks - pHL2ResearchMode->lastLfTs);
+                        pHL2ResearchMode->spatialRfFps = 1e7 / (double)(timestamp_right.HostTicks - pHL2ResearchMode->lastRfTs);
+                    }
+                    pHL2ResearchMode->lastLfTs = timestamp_left.HostTicks;
+                    pHL2ResearchMode->lastRfTs = timestamp_right.HostTicks;
+
+                    pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp = timestamp_left.HostTicks;
+                    pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp = timestamp_right.HostTicks;
+                    pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp_ft = ts_left.TargetTime().time_since_epoch().count();
+                    pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp_ft = ts_right.TargetTime().time_since_epoch().count();
+
+                    /*if (pHL2ResearchMode->tempRightBuffer.timestamp > 0)
+                    {
+                        pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp = pHL2ResearchMode->tempRightBuffer.timestamp;
+                        pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp_ft = pHL2ResearchMode->tempRightBuffer.timestamp_ft;
+                    }
+                    pHL2ResearchMode->tempRightBuffer.timestamp = timestamp_right.HostTicks;
+                    pHL2ResearchMode->tempRightBuffer.timestamp_ft = ts_right.TargetTime().time_since_epoch().count();*/
+
+                    // save LF and RF images
+                    // Save curret Left Front
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image)
+                    {
+                        OutputDebugString(L"Create Space for Left Front Image...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image = new UINT8[LFOutBufferCount];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image, pLFImage, LFOutBufferCount * sizeof(UINT8));
+
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.LFFrame.extrin)
+                    {
+                        OutputDebugString(L"Create Space for left extrinsics...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.LFFrame.extrin = new float[12];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.LFFrame.extrin, LfExtrin.data(), LfExtrin.size() * sizeof(float));
+
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image)
+                    {
+                        OutputDebugString(L"Create Space for Right Front Image...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image = new UINT8[LFOutBufferCount];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image, pRFImage, RFOutBufferCount * sizeof(UINT8));
+
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin)
+                    {
+                        OutputDebugString(L"Create Space for right extrinsics...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin = new float[12];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin, RfExtrin.data(), RfExtrin.size() * sizeof(float));
+
+                    //// Getting Right Front from temp buffer (last iteration) if exists
+                    //if (!pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image)
+                    //{
+                    //    OutputDebugString(L"Create Space for Right Front Image...\n");
+                    //    pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image = new UINT8[RFOutBufferCount];
+                    //}
+                    //if (pHL2ResearchMode->tempRightBuffer.image)
+                    //    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image, 
+                    //        pHL2ResearchMode->tempRightBuffer.image, RFOutBufferCount * sizeof(UINT8));
+
+                    //if (!pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin)
+                    //{
+                    //    OutputDebugString(L"Create Space for right extrinsics...\n");
+                    //    pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin = new float[12];
+                    //}
+                    //if (pHL2ResearchMode->tempRightBuffer.extrin) 
+                    //    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.extrin, 
+                    //        pHL2ResearchMode->tempRightBuffer.extrin, RfExtrin.size() * sizeof(float)); 
+
+                    //// Saving current Right Front into temp buffer
+                    //if (!pHL2ResearchMode->tempRightBuffer.image)
+                    //{
+                    //    OutputDebugString(L"Create Space for Right Front Image...\n");
+                    //    pHL2ResearchMode->tempRightBuffer.image = new UINT8[RFOutBufferCount];
+                    //}
+                    //memcpy(pHL2ResearchMode->tempRightBuffer.image, pRFImage, RFOutBufferCount * sizeof(UINT8));
+
+
+                    //if (!pHL2ResearchMode->tempRightBuffer.extrin)
+                    //{
+                    //    OutputDebugString(L"Create Space for right extrinsics...\n");
+                    //    pHL2ResearchMode->tempRightBuffer.extrin = new float[12];
+                    //}
+                    //memcpy(pHL2ResearchMode->tempRightBuffer.extrin, RfExtrin.data(), RfExtrin.size() * sizeof(float));
+
+
+                }
+				pHL2ResearchMode->m_LFImageUpdated = true;
+				pHL2ResearchMode->m_RFImageUpdated = true;
+
+                // release space
+				if (pLFFrame) pLFFrame->Release();
+				if (pRFFrame) pRFFrame->Release();
 
 				if (pLFCameraFrame) pLFCameraFrame->Release();
 				if (pRFCameraFrame) pRFCameraFrame->Release();
@@ -1468,6 +1769,10 @@ namespace winrt::HL2UnityPlugin::implementation
 
     inline int HL2ResearchMode::GetDepthBufferSize() { return m_depthBufferSize; }
 
+    inline float HL2ResearchMode::GetSpatialLfFps() { return spatialLfFps; }
+
+    inline float HL2ResearchMode::GetSpatialRfFps() { return spatialRfFps; }
+
     inline bool HL2ResearchMode::DepthMapTextureUpdated() { return m_depthMapTextureUpdated; }
 
     inline bool HL2ResearchMode::DepthMapUpdated() { return m_depthMapUpdated; }
@@ -1635,15 +1940,25 @@ namespace winrt::HL2UnityPlugin::implementation
         OutputDebugString(L"Stopped IMU loop...\n");
         
         m_spatialCamerasFrontLoopStarted = false;
-        if (m_LFImage) 
+        if (m_lastSpatialFrame.LFFrame.image)
         {
-            delete[] m_LFImage;
-            m_LFImage = nullptr;
+            delete[] m_lastSpatialFrame.LFFrame.image;
+            m_lastSpatialFrame.LFFrame.image = nullptr;
         }
-        if (m_RFImage)
+        if (m_lastSpatialFrame.RFFrame.image)
         {
-            delete[] m_RFImage;
-            m_RFImage = nullptr;
+            delete[] m_lastSpatialFrame.RFFrame.image;
+            m_lastSpatialFrame.RFFrame.image = nullptr;
+        }
+        if (m_lastSpatialFrame.LFFrame.extrin)
+        {
+            delete[] m_lastSpatialFrame.LFFrame.extrin;
+            m_lastSpatialFrame.LFFrame.extrin = nullptr;
+        }
+        if (m_lastSpatialFrame.RFFrame.extrin)
+        {
+            delete[] m_lastSpatialFrame.RFFrame.extrin;
+            m_lastSpatialFrame.RFFrame.extrin = nullptr;
         }
         if (m_LLImage)
         {
@@ -1750,31 +2065,95 @@ namespace winrt::HL2UnityPlugin::implementation
         return tempBuffer;
     }
 
-	com_array<uint8_t> HL2ResearchMode::GetLFCameraBuffer()
-	{
-		std::shared_lock<std::shared_mutex> l(mu);
-		if (!m_LFImage)
-		{
-			return com_array<UINT8>();
-		}
-		com_array<UINT8> tempBuffer = com_array<UINT8>(std::move_iterator(m_LFImage), std::move_iterator(m_LFImage + m_spatialBufferSize));
+    com_array<uint8_t> HL2ResearchMode::GetLFCameraBuffer(int64_t& ts, bool withExtrinsics)
+    {
+        std::shared_lock<std::shared_mutex> l(mu);
+        if (!m_lastSpatialFrame.LFFrame.image)
+        {
+            return com_array<UINT8>();
+        }
+        ts = m_lastSpatialFrame.LFFrame.timestamp_ft;
 
-		m_LFImageUpdated = false;
-		return tempBuffer;
-	}
+        if (withExtrinsics)
+        {
+            std::vector<UINT8> buffer(m_spatialBufferSize + 48);
+            memcpy(buffer.data(), m_lastSpatialFrame.LFFrame.extrin, 48);
+            memcpy(buffer.data() + 48, m_lastSpatialFrame.LFFrame.image, m_spatialBufferSize);
+            com_array<UINT8> tempBuffer = com_array<UINT8>(buffer);
+            m_LFImageUpdated = false;
+            return tempBuffer;
+        }
+        else
+        {
+            com_array<UINT8> tempBuffer = com_array<UINT8>(std::move_iterator(m_lastSpatialFrame.LFFrame.image), std::move_iterator(m_lastSpatialFrame.LFFrame.image + m_spatialBufferSize));
+            m_LFImageUpdated = false;
+            return tempBuffer;
+        }
+    }
 
-	com_array<uint8_t> HL2ResearchMode::GetRFCameraBuffer()
-	{
-		std::shared_lock<std::shared_mutex> l(mu);
-		if (!m_RFImage)
-		{
-			return com_array<UINT8>();
-		}
-		com_array<UINT8> tempBuffer = com_array<UINT8>(std::move_iterator(m_RFImage), std::move_iterator(m_RFImage + m_spatialBufferSize));
+    com_array<uint8_t> HL2ResearchMode::GetRFCameraBuffer(int64_t& ts, bool withExtrinsics)
+    {
+        std::shared_lock<std::shared_mutex> l(mu);
+        if (!m_lastSpatialFrame.RFFrame.image)
+        {
+            return com_array<UINT8>();
+        }
+        ts = m_lastSpatialFrame.RFFrame.timestamp_ft;
 
-		m_RFImageUpdated = false;
-		return tempBuffer;
-	}
+        if (withExtrinsics)
+        {
+            std::vector<UINT8> buffer(m_spatialBufferSize + 48);
+            memcpy(buffer.data(), m_lastSpatialFrame.RFFrame.extrin, 48);
+            memcpy(buffer.data() + 48, m_lastSpatialFrame.RFFrame.image, m_spatialBufferSize);
+            com_array<UINT8> tempBuffer = com_array<UINT8>(buffer);
+            m_RFImageUpdated = false;
+            return tempBuffer;
+        }
+        else
+        {
+            com_array<UINT8> tempBuffer = com_array<UINT8>(std::move_iterator(m_lastSpatialFrame.RFFrame.image), std::move_iterator(m_lastSpatialFrame.RFFrame.image + m_spatialBufferSize));
+            m_RFImageUpdated = false;
+            return tempBuffer;
+        }
+    }
+
+    com_array<uint8_t> HL2ResearchMode::GetLRFCameraBuffer(int64_t& ts_left, int64_t& ts_right, bool withExtrinsics)
+    {
+        std::shared_lock<std::shared_mutex> l(mu);
+        if (!m_lastSpatialFrame.LFFrame.image || !m_lastSpatialFrame.RFFrame.image)
+        {
+            return com_array<UINT8>();
+        }
+
+        ts_left = m_lastSpatialFrame.LFFrame.timestamp_ft;
+        ts_right = m_lastSpatialFrame.RFFrame.timestamp_ft;
+
+        if (withExtrinsics)
+        {
+            std::vector<UINT8> rawTempBuffer(m_spatialBufferSize * 2 + 96);
+            memcpy(rawTempBuffer.data(), m_lastSpatialFrame.LFFrame.extrin, 48);
+            memcpy(rawTempBuffer.data() + 48, m_lastSpatialFrame.RFFrame.extrin, 48);
+
+            memcpy(rawTempBuffer.data() + 96, m_lastSpatialFrame.LFFrame.image, m_spatialBufferSize);
+            memcpy(rawTempBuffer.data() + 96 + m_spatialBufferSize, m_lastSpatialFrame.RFFrame.image, m_spatialBufferSize);
+
+            com_array<UINT8> tempBuffer = com_array<UINT8>(rawTempBuffer);
+            m_LFImageUpdated = false;
+            m_RFImageUpdated = false;
+            return tempBuffer;
+        }
+        else
+        {
+            std::vector<UINT8> rawTempBuffer(m_spatialBufferSize * 2);
+            memcpy(rawTempBuffer.data(), m_lastSpatialFrame.LFFrame.image, m_spatialBufferSize);
+            memcpy(rawTempBuffer.data() + m_spatialBufferSize, m_lastSpatialFrame.RFFrame.image, m_spatialBufferSize);
+
+            com_array<UINT8> tempBuffer = com_array<UINT8>(rawTempBuffer);
+            m_LFImageUpdated = false;
+            m_RFImageUpdated = false;
+            return tempBuffer;
+        }
+    }
 
     com_array<uint8_t> HL2ResearchMode::GetLLCameraBuffer()
     {
@@ -1807,9 +2186,9 @@ namespace winrt::HL2UnityPlugin::implementation
         std::shared_lock<std::shared_mutex> l(mu);
         if (!m_PVImage)
         {
-            return com_array<UINT8>();
+            return com_array<uint8_t>();
         }
-        com_array<UINT8> tempBuffer = com_array<UINT8>(std::move_iterator(m_PVImage), std::move_iterator(m_PVImage + m_PVbufferSize));
+        com_array<uint8_t> tempBuffer = com_array<UINT8>(std::move_iterator(m_PVImage), std::move_iterator(m_PVImage + m_PVbufferSize));
 
         m_PVImageUpdated = false;
         return tempBuffer;
@@ -1821,10 +2200,18 @@ namespace winrt::HL2UnityPlugin::implementation
     com_array<float> HL2ResearchMode::GetPointCloudBuffer()
     {
         std::shared_lock<std::shared_mutex> l(mu);
+        OutputDebugString(L"Getting point cloud...\n");
         if (!m_reconstructShortThrowPointCloud || m_pointcloudLength == 0)
         {
+            std::stringstream ss;
+            ss << "Point Cloud: " << m_pointcloudLength << " / " << m_reconstructShortThrowPointCloud;
+            std::string msg = ss.str();
+            std::wstring widemsg = std::wstring(msg.begin(), msg.end());
+            OutputDebugString(widemsg.c_str());
+
             return com_array<float>();
         }
+        OutputDebugString(L"Point Cloud exists\n");
         com_array<float> tempBuffer = com_array<float>(std::move_iterator(m_pointCloud), std::move_iterator(m_pointCloud + m_pointcloudLength));
         m_pointCloudUpdated = false;
         return tempBuffer;

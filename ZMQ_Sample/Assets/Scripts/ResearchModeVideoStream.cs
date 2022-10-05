@@ -18,7 +18,6 @@ public class ResearchModeVideoStream : MonoBehaviour
 #endif
     [SerializeField] private ReqRep.Client reqClient;
     [SerializeField] private Publisher publisher;
-    [SerializeField] private bool enableIMU = false;
     
     public GameObject shortDepthPreviewPlane = null;
     private Material shortDepthMediaMaterial = null;
@@ -30,12 +29,13 @@ public class ResearchModeVideoStream : MonoBehaviour
 
     private byte[] shortDepthTransformData = null;
 
-    public GameObject PVPreviewPlane = null;
-    private Material PVMediaMaterial = null;
-    private Texture2D PVMediaTexture = null;
-
-    private bool running = false;
+    private bool sensorStarted = false;
     private bool lutSent = false;
+    private bool lutWaitingResend = false;
+    private bool startToolTracking = false;
+    private float lutRetryPeriod = 7.0f; // retry sending lut after x seconds
+    private void SetLutWaitingFlag() { lutWaitingResend = false; }
+
     void Start()
     {
         shortDepthMediaMaterial = shortDepthPreviewPlane.GetComponent<MeshRenderer>().material;
@@ -46,9 +46,7 @@ public class ResearchModeVideoStream : MonoBehaviour
         shortAbMediaTexture = new Texture2D(512, 512, TextureFormat.R16, false);
         shortAbMediaMaterial.mainTexture = shortAbMediaTexture;
 
-        //PVMediaMaterial = PVPreviewPlane.GetComponent<MeshRenderer>().material;
-        //PVMediaTexture = new Texture2D(960, 540, TextureFormat.Alpha8, false);
-        //PVMediaMaterial.mainTexture = PVMediaTexture;
+        StartSensors();
     }
 
     private void SetLutFlag(string msg)
@@ -59,59 +57,60 @@ public class ResearchModeVideoStream : MonoBehaviour
     bool startRealtimePreview = false;
     public void TogglePreview()
     {
-        startRealtimePreview = !startRealtimePreview;
+        startRealtimePreview = !shortDepthPreviewPlane.activeInHierarchy;
 
         shortDepthPreviewPlane.SetActive(startRealtimePreview);
         shortAbPreviewPlane.SetActive(startRealtimePreview);
-        //PVPreviewPlane.SetActive(startRealtimePreview);
     }
     void LateUpdate()
     {
-        if (!running) return;
+        if (!sensorStarted) return;
 
 #if ENABLE_WINMD_SUPPORT
-        // Update LUT
-        if (researchMode.ShortThrowLUTUpdated() && !lutSent)
-        {
-            float[] lut = researchMode.GetShortThrowLUT();
-            if (lut.Length > 0)
-            {
-                var lutData = new byte[lut.Length * 4];
-                Buffer.BlockCopy(lut, 0, lutData, 0, lutData.Length);
-
-                // TODO: make it async?
-                reqClient.SendRequest("depth_lut", lutData, SetLutFlag); 
-            }
-        }
-
-        // Update short depth map texture
+        // -------------------- Ahat camera --------------------
         if (researchMode.DepthMapUpdated())
         {
-            byte[] depthMap = researchMode.GetDepthMapBuffer();
+            float[] shortTransformFloat = researchMode.GetAhatTransformBuffer();
             byte[] shortAbImage = researchMode.GetShortAbImageBuffer();
+            byte[] depthMap = researchMode.GetDepthMapBuffer();
+            long depthTs = researchMode.GetShortDepthTimestamp();
 
             if (depthMap.Length == 0 || shortAbImage.Length == 0) return;
 
-            if (lutSent)
+            // Send Lookup table and depth images for tool tracking
+            if (startToolTracking)
             {
-                long tsData = researchMode.GetShortDepthTimestamp();
-                //byte[] timestamp = BitConverter.GetBytes(tsData);
-                float[] shortTransformFloat = researchMode.GetAhatTransformBuffer();
-
-                if (shortDepthTransformData == null)
+                if (!lutSent && !lutWaitingResend)
                 {
-                    shortDepthTransformData = new byte[shortTransformFloat.Length * 4];
+                    // Update LUT
+                    float[] lut = researchMode.GetShortThrowLUT();
+                    DebugConsole.Log("LUT Updated: " + lut.Length.ToString());
+                    if (lut.Length > 0)
+                    {
+                        var lutData = new byte[lut.Length * 4];
+                        Buffer.BlockCopy(lut, 0, lutData, 0, lutData.Length);
+                        reqClient.SendRequest("depth_lut", lutData, SetLutFlag);
+                        lutWaitingResend = true;
+                        Invoke("SetLutWaitingFlag", lutRetryPeriod);
+                    }
                 }
-                Buffer.BlockCopy(shortTransformFloat, 0, shortDepthTransformData, 0, shortDepthTransformData.Length);
+                else if (lutSent)
+                {
+                    if (shortDepthTransformData == null)
+                    {
+                        shortDepthTransformData = new byte[shortTransformFloat.Length * 4];
+                    }
+                    Buffer.BlockCopy(shortTransformFloat, 0, shortDepthTransformData, 0, shortDepthTransformData.Length);
 
-                NetMQ.NetMQMessage m = new NetMQ.NetMQMessage();
-                m.Append("depth_frame");
-                m.Append(tsData);
-                m.Append(shortDepthTransformData);
-                m.Append(depthMap);
-                m.Append(shortAbImage);
+                    NetMQ.NetMQMessage m = new NetMQ.NetMQMessage();
+                    m.Append("depth_frame");
+                    m.Append(depthTs);
+                    m.Append(shortDepthTransformData);
+                    m.Append(depthMap);
+                    m.Append(shortAbImage);
 
-                publisher.PublishMultipart(m);
+                    publisher.PublishMultipart(m);
+                }
             }
 
             // Show preview
@@ -124,80 +123,62 @@ public class ResearchModeVideoStream : MonoBehaviour
                 shortAbMediaTexture.Apply();
             }
         }
-
-        // update PV camera texture
-        if (researchMode.PVImageUpdated())
-        {
-            byte[] frameTexture = researchMode.GetPVCameraBuffer();
-            if (frameTexture.Length == 0) return;
-            
-            // apply pv data to preview plane
-            if (startRealtimePreview)
-            {
-                PVMediaTexture.LoadRawTextureData(frameTexture);
-                PVMediaTexture.Apply();
-            }
-        }
 #endif
-
     }
 
-    public async void StartSensorsEvent()
+    public void StartToolTracking()
+    {
+        startToolTracking = true;
+
+        if (!sensorStarted) StartSensors();
+    }
+
+    private void StartSensors()
     {
 #if ENABLE_WINMD_SUPPORT
+        // Get Unity Origin Coordinate
+#if UNITY_2020_1_OR_NEWER // note: Unity 2021.2 and later not supported
+        IntPtr WorldOriginPtr = UnityEngine.XR.WindowsMR.WindowsMREnvironment.OriginSpatialCoordinateSystem;
+        var unityWorldOrigin = Marshal.GetObjectForIUnknown(WorldOriginPtr) as Windows.Perception.Spatial.SpatialCoordinateSystem;
+#else
         IntPtr WorldOriginPtr = UnityEngine.XR.WSA.WorldManager.GetNativeISpatialCoordinateSystemPtr();
         var unityWorldOrigin = Marshal.GetObjectForIUnknown(WorldOriginPtr) as Windows.Perception.Spatial.SpatialCoordinateSystem;
-
+#endif
         if (researchMode == null)
         {
             researchMode = new HL2ResearchMode();
         }
+        // Set Unity Origin Coordinate
         researchMode.SetReferenceCoordinateSystem(unityWorldOrigin);
+        // Start Ahat camera
         researchMode.InitializeDepthSensor();
-        if (enableIMU)
-        {
-            researchMode.InitializeIMUSensor();
-        }
-
-        researchMode.StartDepthSensorLoop(false);
-        //await researchMode.InitializePVCamera();
-
-        if (enableIMU)
-        {
-            researchMode.StartIMUSensorLoop();
-        }
+        researchMode.StartDepthSensorLoop(false); // false: start depth loop without reconstructing point cloud
 #endif
-        DebugConsole.Log("Sensors enabled");
+        // Set preview options
         startRealtimePreview = true;
         shortDepthPreviewPlane.SetActive(true);
         shortAbPreviewPlane.SetActive(true);
-        //PVPreviewPlane.SetActive(true);
 
-        running = true;
+        sensorStarted = true;
     }
+
     public async void StopSensorsEvent()
     {
         startRealtimePreview = false;
-        running = false;
-        lutSent = false;
+        startToolTracking = false;
 
         shortDepthPreviewPlane.SetActive(false);
         shortAbPreviewPlane.SetActive(false);
-        PVPreviewPlane.SetActive(false);
 
 #if ENABLE_WINMD_SUPPORT
         await researchMode.StopAllSensorDevice();
         researchMode = null;
+        sensorStarted = false;
 #endif
     }
     public void ExitApplication()
     {
         StopSensorsEvent();
         Application.Quit();
-    }
-
-    private void OnApplicationFocus(bool focus)
-    {
-        if (!focus) StopSensorsEvent();
     }
 }

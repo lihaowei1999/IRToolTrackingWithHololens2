@@ -6,7 +6,7 @@ namespace IRToolTrack
 {
     public class IRToolController : MonoBehaviour
     {
-        [SerializeField] private string host;
+        private string host;
         [SerializeField] private string port;
         private SubListener _listener;
 
@@ -42,7 +42,9 @@ namespace IRToolTrack
         }
         void Start()
         {
+            host = HostIPManager.GetHostIP();
             _listener = new SubListener(host, port);
+            DebugConsole.Log($"Listener listening to {host}:{port}");
         }
         void Update()
         {

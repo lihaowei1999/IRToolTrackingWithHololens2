@@ -9,7 +9,7 @@ from .ThreadFactory import *
 import queue
 
 class IRToolTrack:
-    def __init__(self):
+    def __init__(self, lut):
         ## Variant for sensor datas
         self.down_limit_ab=128
         self.up_limit_ab=512
@@ -27,11 +27,13 @@ class IRToolTrack:
         self.ToolInfo=ToolLoader
         self.ToolNames=ToolLoader[1]
 
+        self.lut = lut
 
-    def track_tool(self, lut):
+
+    def track_tool(self):
         self._isTrackingTool=True
         
-        self.tracking_ir_thread=AHATIRToolTracking(self.AHATForCalFrame,self.ToolInfo[2],self.ToolInfo[1], lut, "12349")
+        self.tracking_ir_thread=AHATIRToolTracking(self.AHATForCalFrame,self.ToolInfo[2],self.ToolInfo[1], self.lut, "12389")
         self.tracking_ir_thread.start()
 
     
@@ -76,3 +78,11 @@ class IRToolTrack:
             ToolNames.append(Tool['ToolName'][0])
             ToolShapes.append(NDI_Tool(Tool['ToolShape']))
         return (True,ToolNames,ToolShapes)
+    
+
+    def save_next_frame(self):
+        self.save_frame = True
+
+    def update_lut(self, lut):
+        self.lut = lut
+        self.tracking_ir_thread.update_lut(lut)

@@ -13,11 +13,11 @@ class AHATIRToolTracking(threading.Thread):
     def __init__(self,_AHATCurrentFrame,Tools,ToolNames,lut,port):
         super(AHATIRToolTracking,self).__init__()
         self.AHATCurrentFrame=_AHATCurrentFrame
-        self._upperlim=256*15
+        self._upperlim=256*20
         self._downlim=256*1.5
         self._minSize=10
-        self._maxSize=300
-        self._distanceTolerance=12
+        self._maxSize=180
+        self._distanceTolerance=8
         self._preretval=0
         self._prelabel=[]
         self._prestats=[]
@@ -29,11 +29,13 @@ class AHATIRToolTracking(threading.Thread):
         self.root_ws = Path(os.path.dirname(os.path.realpath(__file__)))
         self.lut=lut.reshape((512,512,3))
 
+        self.flipx = np.ones((4,4))
+        self.flipx[1,0]=-1;self.flipx[0,1]=-1;self.flipx[2,0]=-1;self.flipx[0,2]=-1;self.flipx[0,3]=-1
         self.flipy = np.ones((4,4))
         self.flipy[1,0]=-1;self.flipy[0,1]=-1;self.flipy[2,1]=-1;self.flipy[1,2]=-1;self.flipy[1,3]=-1
         self.flipz = np.ones((4,4))
-        self.flipz[2,0]=-1;self.flipz[2,1]=-1;self.flipz[0,2]=-1;self.flipz[1,2]=-1;self.flipz[2,3]=-1
-        
+        self.flipz[2,0]=-1;self.flipz[0,2]=-1;self.flipz[1,2]=-1;self.flipz[2,1]=-1;self.flipz[2,3]=-1
+
         self.port_pub = port
         self.pub_lock = threading.Lock()
         self.context = zmq.Context()
@@ -51,9 +53,9 @@ class AHATIRToolTracking(threading.Thread):
         # Set searching para
         self.Scene.setPara(6,6)
         self.Scene.LoadTools(self.Tools)
-        _intrin=loadmat(str(self.root_ws / 'AHAT_Para_Python.mat'))
-        self.mtx=_intrin['Mtx']
-        self.distcoef=_intrin['dist']
+        # _intrin=loadmat(str(self.root_ws / 'AHAT_Para_Python.mat'))
+        # self.mtx=_intrin['Mtx']
+        # self.distcoef=_intrin['dist']
 
     def run(self):
         # try:
@@ -84,17 +86,23 @@ class AHATIRToolTracking(threading.Thread):
             self._precentroids=centroids
             self._prelabelcorr=label_corr
             if (len(centroids)==0):
-                print("No balls detected.")
+                # print("No balls detected.")
                 continue
-            _temp_xy = cv2.undistortPoints(centroids,self.mtx,self.distcoef)
             _xyd=[]
             _xyz=[]
             for j in range(centroids.shape[0]):
                 _u=centroids[j,0]
                 _v=centroids[j,1]
                 # _d=_DepthFrame[int(_v),int(_u)]
-                _d=_DepthFrame[int(_v),int(_u)]+6.3
+                _v_l = np.floor(_v).astype(int)
+                _u_l = np.floor(_u).astype(int)
+                # _d = 0.985*(np.min(_DepthFrame[_v_l:_v_l+2, _u_l:_u_l+2]))+6.3
+                _d=np.min(_DepthFrame[_v_l:_v_l+2, _u_l:_u_l+2])-4
+                # _d=_DepthFrame[int(_v),int(_u)]+6.3
+
+                # implement interpolation
                 _temp_vec = self.lookup_lut(_v,_u)
+                # _temp_vec = self.lut[int(_v),int(_u)]
 
                 _xyd.append([_temp_vec[0]/_temp_vec[2],_temp_vec[1]/_temp_vec[2],_d])
                 _xyz.append(_temp_vec * _d)
@@ -117,6 +125,10 @@ class AHATIRToolTracking(threading.Thread):
             extrin_rhs = np.row_stack((Curr_fr.pose,np.array([0,0,0,1])))
 
             tool_pose_rhs = _tempScene.TransformatrixFiltered[0]
+            if tool_pose_rhs[3,3]==0:
+                time.sleep(0.010)
+                continue
+
             tool_pose_rhs[:3,3] = tool_pose_rhs[:3,3] / 1000.0
             toolInWorld_rhs = extrin_rhs @ tool_pose_rhs
             toolInWorld_lhs = toolInWorld_rhs * self.flipz
@@ -135,6 +147,7 @@ class AHATIRToolTracking(threading.Thread):
         except Exception as e:
             print(e)
     
+
     def lookup_lut(self, v, u):
         v1 = int(v)
         v2 = min(v1+1, 511)
@@ -152,6 +165,26 @@ class AHATIRToolTracking(threading.Thread):
         vec = (1-kv)*(1-ku)*vec_v1u1 + (1-kv)*ku*vec_v1u2 + kv*(1-ku)*vec_v2u1 + kv*ku*vec_v2u2
 
         return vec / np.linalg.norm(vec)
+
+
+    def update_lut(self, lut):
+        self.lut = lut.reshape((512,512,3))
+    
+
+    @staticmethod
+    def trans_quat_to_mat(trans, quat):
+        T = np.eye(4)
+        T[:3,:3] = R.from_quat(quat).as_matrix()
+        T[:3,3] = trans
+        return T
+
+    
+    @staticmethod
+    def trans_rotm_to_mat(trans, rotm):
+        T = np.eye(4)
+        T[:3,:3] = rotm
+        T[:3,3] = trans
+        return T
 
 
 class AHAT_DataTransferThread(threading.Thread):

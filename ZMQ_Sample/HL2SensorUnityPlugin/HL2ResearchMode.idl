@@ -13,8 +13,9 @@ namespace HL2UnityPlugin
         UInt8[] GetLongDepthMapBuffer();
         UInt8[] GetLongDepthMapTextureBuffer();
 
-		UInt8[] GetLFCameraBuffer();
-		UInt8[] GetRFCameraBuffer();
+        UInt8[] GetLFCameraBuffer(out Int64 ts, Boolean withExtrinsics);
+        UInt8[] GetRFCameraBuffer(out Int64 ts, Boolean withExtrinsics);
+        UInt8[] GetLRFCameraBuffer(out Int64 ts_left, out Int64 ts_right, Boolean withExtrinsics);
         UInt8[] GetLLCameraBuffer();
         UInt8[] GetRRCameraBuffer();
 
@@ -33,6 +34,8 @@ namespace HL2UnityPlugin
         INT64 GetLongDepthTimestamp();
         INT64 GetShortDepthTimestamp();
         INT64 GetIMUTimestamp();
+        Single GetSpatialLfFps();
+        Single GetSpatialRfFps();
 
         Int32 GetDepthBufferSize();
         Int32 GetLongDepthBufferSize();
@@ -65,7 +68,7 @@ namespace HL2UnityPlugin
         void InitializeSpatialCamerasFront();
         void InitializeSpatialCamerasAll();
         void InitializeIMUSensor();
-        Windows.Foundation.IAsyncAction InitializePVCamera();
+        Windows.Foundation.IAsyncAction InitializePVCamera(Int32 width);
         void InitializeArucoTrackingStereo();
 
         void StartDepthSensorLoop(Boolean reconstructPointCloud);

@@ -8,21 +8,28 @@ namespace ReqRep
 {
     public class Client : MonoBehaviour
     {
-        [SerializeField] private string host;
+        private string host;
         [SerializeField] private string port;
         private RequestSocket _requestSocket;
-        private TimeSpan timeout = new TimeSpan(0, 0, 2);
+        private TimeSpan timeout = new TimeSpan(0, 0, 0, 0, 800);
         public enum Status
         {
             Inactive,
             Active
         }
         private Status _status = Status.Inactive;
+
+        private void Start()
+        {
+            host = HostIPManager.GetHostIP();
+        }
+
         public void StartClient()
         {
             AsyncIO.ForceDotNet.Force();
             _requestSocket = new RequestSocket();
             _requestSocket.Connect($"tcp://{host}:{port}");
+            DebugConsole.Log($"Request Connected with {host}:{port}");
 
             _requestSocket.Options.Correlate = true;
             _requestSocket.Options.Relaxed = true;
@@ -58,10 +65,11 @@ namespace ReqRep
             m.Append(topic);
             m.Append(data);
             _requestSocket.SendMultipartMessage(m);
-            while (!ReceiveMessage(callback))
-            {
-                _requestSocket.SendMultipartMessage(m);
-            }
+            ReceiveMessage(callback);
+            //while (!ReceiveMessage(callback))
+            //{
+            //    _requestSocket.SendMultipartMessage(m);
+            //}
         }
 
         private bool ReceiveMessage(Action<string> callback)
