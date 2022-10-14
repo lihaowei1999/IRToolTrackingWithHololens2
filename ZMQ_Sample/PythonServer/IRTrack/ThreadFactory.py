@@ -10,7 +10,7 @@ from pathlib import Path
 import time
 
 class AHATIRToolTracking(threading.Thread):
-    def __init__(self,_AHATCurrentFrame,Tools,ToolNames,lut,port):
+    def __init__(self,_AHATCurrentFrame,Tools,ToolNames,port,sphere_radius,depth_offset):
         super(AHATIRToolTracking,self).__init__()
         self.AHATCurrentFrame=_AHATCurrentFrame
         self._upperlim=256*20
@@ -27,7 +27,9 @@ class AHATIRToolTracking(threading.Thread):
         self.ToolNames=ToolNames
         self._start=False
         self.root_ws = Path(os.path.dirname(os.path.realpath(__file__)))
-        self.lut=lut.reshape((512,512,3))
+
+        self.sphere_radius=sphere_radius
+        self.depth_offset=depth_offset
 
         self.flipx = np.ones((4,4))
         self.flipx[1,0]=-1;self.flipx[0,1]=-1;self.flipx[2,0]=-1;self.flipx[0,2]=-1;self.flipx[0,3]=-1
@@ -69,57 +71,16 @@ class AHATIRToolTracking(threading.Thread):
                 time.sleep(0.010)
                 continue
             Curr_fr=self.AHATCurrentFrame.get()
-            _Frame=Curr_fr.MatReflectivity
-            _DepthFrame=Curr_fr.MatDepth
             
-            # _im=_Frame
-            _im=copy.deepcopy(_Frame)
-            _im[_im>=self._upperlim]=self._upperlim
-            _im[_im<=self._downlim]=self._downlim
-            _im=(_im-self._downlim)*(256*256/self._upperlim)/(self._upperlim-self._downlim)*255
-            _mask=np.array(_im/256,dtype='uint8')
-            _im[_mask==0]=0
-            _displayTag=np.zeros([512,512])
-            # retval,labels,stats,centroids=cv2.connectedComponentsWithStats(_mask,connectivity=8)
-            retval,labels,stats,centroids,label_corr=DetectBalls(_mask,self._minSize,self._maxSize,self._distanceTolerance,self._preretval,[],[],self._precentroids,self._prelabelcorr)
-            self._preretval=retval
-            self._precentroids=centroids
-            self._prelabelcorr=label_corr
-            if (len(centroids)==0):
-                # print("No balls detected.")
-                continue
-            _xyd=[]
-            _xyz=[]
-            for j in range(centroids.shape[0]):
-                _u=centroids[j,0]
-                _v=centroids[j,1]
-                # _d=_DepthFrame[int(_v),int(_u)]
-                _v_l = np.floor(_v).astype(int)
-                _u_l = np.floor(_u).astype(int)
-                # _d = 0.985*(np.min(_DepthFrame[_v_l:_v_l+2, _u_l:_u_l+2]))+6.3
-                _d=np.min(_DepthFrame[_v_l:_v_l+2, _u_l:_u_l+2])-4
-                # _d=_DepthFrame[int(_v),int(_u)]+6.3
+            holo_xyd = np.array(Curr_fr.centers)
+            holo_xyd[:,2] = holo_xyd[:,2] + self.sphere_radius - self.depth_offset
+            holo_xyz = []
+            for i in range(len(holo_xyd)):
+                temp_vec = np.array([holo_xyd[i,0], holo_xyd[i,1], 1])
+                holo_xyz.append(temp_vec / np.linalg.norm(temp_vec) * holo_xyd[i,2] )
+            holo_xyz = np.array(holo_xyz)
+            _tempScene=AHAT_NDIToolSceneFrame(holo_xyz,holo_xyd,_timestamp=Curr_fr.timestamp)
 
-                # implement interpolation
-                _temp_vec = self.lookup_lut(_v,_u)
-                # _temp_vec = self.lut[int(_v),int(_u)]
-
-                _xyd.append([_temp_vec[0]/_temp_vec[2],_temp_vec[1]/_temp_vec[2],_d])
-                _xyz.append(_temp_vec * _d)
-                #----------------------------------------------------
-                # _xyd.append([_temp_xy[j][0][0],_temp_xy[j][0][1],_d])
-                # # _ori_xyz=[_temp_xy[j][0][0]*_d,_temp_xy[j][0][1]*_d,_d]
-                # # _l=np.sqrt(sum(np.array(_ori_xyz)**2))
-                # _ori_xyz=[_temp_xy[j][0][0],_temp_xy[j][0][1],1]
-                # _l=np.sqrt(sum(np.array(_ori_xyz)**2))
-                # _real_xyz=_ori_xyz/_l*_d
-                # # _xyz.append(list(_ori_xyz/_l*(_l+5.82)))
-
-                # _xyz.append(_real_xyz)
-                #-----------------------------------------------------
-
-            _tempScene=AHAT_NDIToolSceneFrame(np.array(_xyz),np.array(_xyd),_timestamp=Curr_fr.timestamp)
-            _tempScene.PixelXYData=centroids
             self.Scene.SearchTools(_tempScene)
 
             extrin_rhs = np.row_stack((Curr_fr.pose,np.array([0,0,0,1])))

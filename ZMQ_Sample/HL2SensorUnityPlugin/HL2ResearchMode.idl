@@ -29,6 +29,7 @@ namespace HL2UnityPlugin
         Single[] GetRigTransformBuffer();
         Single[] GetIMUSample();
         Single[] GetArucoCornersStereo(Int32 id);
+        Single[] GetIRToolCenters();
 
         INT64 GetPVTimestamp();
         INT64 GetLongDepthTimestamp();
@@ -42,9 +43,9 @@ namespace HL2UnityPlugin
         String PrintDepthResolution();
         String PrintDepthExtrinsics();
         String PrintLongDepthExtrinsics();
-		String PrintSpatialCameraResolution();
-		String PrintLFExtrinsics();
-		String PrintRFExtrinsics();
+        String PrintSpatialCameraResolution();
+        String PrintLFExtrinsics();
+        String PrintRFExtrinsics();
         String PrintLLExtrinsics();
         String PrintRRExtrinsics();
         String PrintPVIntrinsics();
@@ -54,14 +55,16 @@ namespace HL2UnityPlugin
         Boolean PointCloudUpdated();
         Boolean LongDepthMapTextureUpdated();
         Boolean LongDepthMapUpdated();
-		Boolean LFImageUpdated();
-		Boolean RFImageUpdated();
+        Boolean LFImageUpdated();
+        Boolean RFImageUpdated();
         Boolean LLImageUpdated();
         Boolean RRImageUpdated();
         Boolean PVImageUpdated();
         Boolean LongThrowLUTUpdated();
         Boolean ShortThrowLUTUpdated();
         Boolean IMUSampleUpdated();
+        Boolean PVInterrupted();
+        Boolean IRToolUpdated();
 
         void InitializeDepthSensor();
         void InitializeLongDepthSensor();
@@ -71,9 +74,9 @@ namespace HL2UnityPlugin
         Windows.Foundation.IAsyncAction InitializePVCamera(Int32 width);
         void InitializeArucoTrackingStereo();
 
-        void StartDepthSensorLoop(Boolean reconstructPointCloud);
+        void StartDepthSensorLoop(Boolean reconstructPointCloud, Boolean startIRToolTrack);
         void StartLongDepthSensorLoop();
-		void StartSpatialCamerasFrontLoop();
+        void StartSpatialCamerasFrontLoop();
         void StartSpatialCamerasAllLoop();
         void StartIMUSensorLoop();
 

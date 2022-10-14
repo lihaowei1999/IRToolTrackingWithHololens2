@@ -9,11 +9,15 @@ from .ThreadFactory import *
 import queue
 
 class IRToolTrack:
-    def __init__(self, lut):
+    def __init__(self, sphere_radius):
         ## Variant for sensor datas
         self.down_limit_ab=128
         self.up_limit_ab=512
         self._mx=5
+        self.sphere_radius = sphere_radius
+
+        self.port_pub = "12389"
+        self.depth_offset = 0 # unit: mm
 
         self.AHATForCalFrame=queue.Queue(maxsize=self._mx)
         self.AHAT_isworking=False
@@ -27,29 +31,22 @@ class IRToolTrack:
         self.ToolInfo=ToolLoader
         self.ToolNames=ToolLoader[1]
 
-        self.lut = lut
-
 
     def track_tool(self):
         self._isTrackingTool=True
         
-        self.tracking_ir_thread=AHATIRToolTracking(self.AHATForCalFrame,self.ToolInfo[2],self.ToolInfo[1], self.lut, "12389")
+        self.tracking_ir_thread=AHATIRToolTracking(self.AHATForCalFrame,
+                                                self.ToolInfo[2],
+                                                self.ToolInfo[1], 
+                                                self.port_pub,
+                                                self.sphere_radius,
+                                                self.depth_offset)
         self.tracking_ir_thread.start()
 
     
-    def add_frame(self, frame_depth, frame_ab, pose, timestamp):
+    def add_frame(self, centers, pose, timestamp):
         if not self.AHATForCalFrame.full():
-            Ab_low=self.down_limit_ab
-            Ab_high=self.up_limit_ab
-
-            _,imgdepth=cv2.threshold(frame_depth,1000,0,cv2.THRESH_TRUNC)
-            imgdepth_processed=np.uint8(imgdepth/4)
-            imgab_processed=copy.deepcopy(frame_ab)
-            imgab_processed[imgab_processed<Ab_low]=Ab_low
-            imgab_processed[imgab_processed>Ab_high]=Ab_high
-            imgab_processed=np.uint8((imgab_processed-Ab_low)/(Ab_high-Ab_low)*255)
-            Frame_this=AHATFrame(imgdepth_processed,imgab_processed,frame_depth,frame_ab, timestamp, pose)
-            
+            Frame_this=AHATFrame(centers, timestamp, pose)
             self.AHATForCalFrame.put(Frame_this)
         else:
             print(".", end='', flush=True)

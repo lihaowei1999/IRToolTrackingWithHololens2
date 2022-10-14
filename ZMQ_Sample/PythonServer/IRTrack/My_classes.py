@@ -12,13 +12,10 @@ class AHATRawFrame:
         self.timestamp=_timestamp
         
 class AHATFrame:
-    def __init__(self,_MatDepthProcessed,_MatReflectivityProcessed,_MatDepth,_MatReflectivity,_timestamp, _pose):
-        self.MatDepth=_MatDepth
-        self.MatReflectivity=_MatReflectivity
-        self.MatDepthProcessed=_MatDepthProcessed
-        self.MatReflectivityProcessed=_MatReflectivityProcessed
+    def __init__(self,_centers,_timestamp, _pose):
         self.timestamp=_timestamp
         self.pose = _pose
+        self.centers = _centers
         
 class VLCRawFrame:
     def __init__(self,_RawVLC,_timestamp):

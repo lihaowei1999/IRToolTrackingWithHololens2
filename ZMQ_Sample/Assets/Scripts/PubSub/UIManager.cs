@@ -14,7 +14,6 @@ namespace PubSub
         [SerializeField] private IRToolTrack.IRToolController toolTarget;
 
         private Publisher pub;
-        private ReqRep.Client reqClient;
 
         private void Awake()
         {
@@ -24,7 +23,6 @@ namespace PubSub
         private void Start()
         {
             pub = GetComponent<Publisher>();
-            reqClient = GetComponent<ReqRep.Client>();
 
             sensorSwitch?.OnClick.AddListener(ToggleSensorEvent);
             previewToggle?.OnClick.AddListener(TogglePreview);
@@ -39,10 +37,7 @@ namespace PubSub
             {
                 sensorSwitch.IsEnabled = false;
                 pub.StartDataPublisher();
-                reqClient.StartClient(); 
-                DebugConsole.Log("Starting tool tracking");
                 toolTarget.StartTracking();
-                DebugConsole.Log("Starting sensors");
                 researchMode.StartToolTracking();
                 Invoke("ActivateSensorSwitch", 2.0f);
             }
@@ -50,9 +45,8 @@ namespace PubSub
             {
                 sensorSwitch.IsEnabled = false;
                 pub.StopDataPublisher();
-                reqClient.StopClient();
-                researchMode.StopSensorsEvent();
                 toolTarget.StopTracking();
+                researchMode.StopToolTracking();
                 Invoke("ActivateSensorSwitch", 2.0f);
             }
         }

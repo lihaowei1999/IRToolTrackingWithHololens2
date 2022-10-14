@@ -21,6 +21,7 @@
 #include <winrt/Windows.Media.Devices.Core.h>
 #include <winrt/Windows.Media.Capture.Frames.h>
 #include <winrt/Windows.Graphics.Imaging.h>
+#include <winrt/Windows.Foundation.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/aruco.hpp>
@@ -53,6 +54,8 @@ namespace winrt::HL2UnityPlugin::implementation
         };
 
         HL2ResearchMode();
+        static HRESULT CheckCamConsent();
+        static HRESULT CheckImuConsent();
 
         UINT16 GetCenterDepth();
         int GetDepthBufferSize();
@@ -60,9 +63,9 @@ namespace winrt::HL2UnityPlugin::implementation
         hstring PrintDepthResolution();
         hstring PrintDepthExtrinsics();
         hstring PrintLongDepthExtrinsics();
-		hstring PrintSpatialCameraResolution();
-		hstring PrintLFExtrinsics();
-		hstring PrintRFExtrinsics();
+        hstring PrintSpatialCameraResolution();
+        hstring PrintLFExtrinsics();
+        hstring PrintRFExtrinsics();
         hstring PrintLLExtrinsics();
         hstring PrintRRExtrinsics();
         hstring PrintPVIntrinsics();
@@ -76,7 +79,7 @@ namespace winrt::HL2UnityPlugin::implementation
         winrt::Windows::Foundation::IAsyncAction InitializePVCameraAsync();
         void InitializeArucoTrackingStereo();
 
-        void StartDepthSensorLoop(bool reconstructPointCloud);
+        void StartDepthSensorLoop(bool reconstructPointCloud, bool startIRToolTrack);
         void StartLongDepthSensorLoop();
         void StartIMUSensorLoop();
         void StartSpatialCamerasFrontLoop();
@@ -90,13 +93,15 @@ namespace winrt::HL2UnityPlugin::implementation
         bool LongDepthMapTextureUpdated();
         bool LongDepthMapUpdated();
         bool IMUSampleUpdated();
-		bool LFImageUpdated();
-		bool RFImageUpdated();
+        bool LFImageUpdated();
+        bool RFImageUpdated();
         bool LLImageUpdated();
         bool RRImageUpdated();
         bool PVImageUpdated();
         bool LongThrowLUTUpdated();
         bool ShortThrowLUTUpdated();
+        bool IRToolUpdated();
+        bool PVInterrupted();
 
         void SetReferenceCoordinateSystem(Windows::Perception::Spatial::SpatialCoordinateSystem refCoord);
         void SetPointCloudRoiInSpace(float centerX, float centerY, float centerZ, float boundX, float boundY, float boundZ);
@@ -127,6 +132,7 @@ namespace winrt::HL2UnityPlugin::implementation
         com_array<float> GetArucoCornersStereo(int id);
         float GetSpatialLfFps();
         float GetSpatialRfFps();
+        com_array<float> GetIRToolCenters();
 
     protected:
         void OnFrameArrived(const winrt::Windows::Media::Capture::Frames::MediaFrameReader& sender,
@@ -134,7 +140,7 @@ namespace winrt::HL2UnityPlugin::implementation
     private:
         float* m_pointCloud = nullptr;
         int m_pointcloudLength = 0;
-        float *m_lut_short, *m_lut_long = nullptr;
+        float* m_lut_short, * m_lut_long = nullptr;
         int m_lutLength_short, m_lutLength_long = 0;
         float* m_floatContainer = nullptr;
         float* m_ahatTransform = nullptr;
@@ -150,6 +156,10 @@ namespace winrt::HL2UnityPlugin::implementation
         UINT8* m_RRImage = nullptr;
         UINT8* m_PVImage = nullptr;
         float* m_imuSample = nullptr;
+
+        float* m_irToolCenters = nullptr;
+        int m_irToolCenterSize = 0;
+
         IResearchModeSensor* m_depthSensor = nullptr;
         IResearchModeCameraSensor* m_pDepthCameraSensor = nullptr;
         IResearchModeSensor* m_longDepthSensor = nullptr;
@@ -190,18 +200,20 @@ namespace winrt::HL2UnityPlugin::implementation
         std::atomic_bool m_longDepthMapUpdated = false;
         std::atomic_bool m_pointCloudUpdated = false;
         std::atomic_bool m_useRoiFilter = false;
-		std::atomic_bool m_LFImageUpdated = false;
-		std::atomic_bool m_RFImageUpdated = false;
+        std::atomic_bool m_LFImageUpdated = false;
+        std::atomic_bool m_RFImageUpdated = false;
         std::atomic_bool m_LLImageUpdated = false;
         std::atomic_bool m_RRImageUpdated = false;
         std::atomic_bool m_PVImageUpdated = false;
         std::atomic_bool m_imuSampleUpdated = false;
+        std::atomic_bool m_irToolCentersUpdated = false;
 
         std::atomic_bool m_LUTGenerated_long, m_LUTGenerated_short = false;
         std::atomic_bool m_PVIntrinsicsRetrived = false;
         std::atomic_bool m_startArucoTrackingStereo = false;
         std::atomic_bool m_startArucoTrackingRGB = false;
         std::atomic_bool m_reconstructShortThrowPointCloud = false;
+        std::atomic_bool m_startIRToolTracking = false;
 
         cv::Ptr<cv::aruco::DetectorParameters> m_arucoDetectorParameters;
         cv::Ptr<cv::aruco::Dictionary> m_arucoDictionary;
@@ -269,20 +281,31 @@ namespace winrt::HL2UnityPlugin::implementation
         long long m_latestIMUTimestamp = 0;
         winrt::Windows::Media::Capture::Frames::MediaFrameReference m_latestFrame = nullptr;
         std::atomic_bool m_pvFrameArrived = false;
+        std::atomic_bool m_pvFrameInterrupted = false;
 
         // writing thread
         static void CameraWriteThread(HL2ResearchMode* pProcessor);
         std::thread* m_pWriteThread = nullptr;
         bool m_fExit = false;
 
-        struct Frame {
+        /*struct PvFrame
+        {
+            SoftwareBitmap softwareBitmap;
+            SpatialCoordinateSystem imgCoord;
+            long long timestamp_rel;
+            float fx, fy, px, py;
+        } m_latestFrame;*/
+
+        struct Frame
+        {
             UINT64 timestamp; // QPC 
             int64_t timestamp_ft; // FileTime
             UINT8* image = nullptr;
             float* extrin = nullptr;
         };
 
-        struct SpatialCameraFrame {
+        struct SpatialCameraFrame
+        {
             Frame LFFrame;
             Frame RFFrame;
             Frame LLFrame;

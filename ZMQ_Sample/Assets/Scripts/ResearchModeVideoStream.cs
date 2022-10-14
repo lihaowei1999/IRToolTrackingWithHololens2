@@ -16,7 +16,6 @@ public class ResearchModeVideoStream : MonoBehaviour
 #if ENABLE_WINMD_SUPPORT
     HL2ResearchMode researchMode;
 #endif
-    [SerializeField] private ReqRep.Client reqClient;
     [SerializeField] private Publisher publisher;
     
     public GameObject shortDepthPreviewPlane = null;
@@ -30,11 +29,7 @@ public class ResearchModeVideoStream : MonoBehaviour
     private byte[] shortDepthTransformData = null;
 
     private bool sensorStarted = false;
-    private bool lutSent = false;
-    private bool lutWaitingResend = false;
     private bool startToolTracking = false;
-    private float lutRetryPeriod = 7.0f; // retry sending lut after x seconds
-    private void SetLutWaitingFlag() { lutWaitingResend = false; }
 
     void Start()
     {
@@ -49,11 +44,6 @@ public class ResearchModeVideoStream : MonoBehaviour
         StartSensors();
     }
 
-    private void SetLutFlag(string msg)
-    {
-        DebugConsole.Log(msg);
-        lutSent = true;
-    }
     bool startRealtimePreview = false;
     public void TogglePreview()
     {
@@ -68,59 +58,44 @@ public class ResearchModeVideoStream : MonoBehaviour
 
 #if ENABLE_WINMD_SUPPORT
         // -------------------- Ahat camera --------------------
-        if (researchMode.DepthMapUpdated())
+        // Show preview
+        if (startRealtimePreview && researchMode.DepthMapUpdated())
+        {
+            shortDepthMediaTexture.LoadRawTextureData(researchMode.GetDepthMapBuffer());
+            shortDepthMediaTexture.Apply();
+
+            shortAbMediaTexture.LoadRawTextureData(researchMode.GetShortAbImageBuffer());
+            shortAbMediaTexture.Apply();
+        }
+
+        // Tool track data
+        if (researchMode.IRToolUpdated())
         {
             float[] shortTransformFloat = researchMode.GetAhatTransformBuffer();
-            byte[] shortAbImage = researchMode.GetShortAbImageBuffer();
-            byte[] depthMap = researchMode.GetDepthMapBuffer();
             long depthTs = researchMode.GetShortDepthTimestamp();
+            float[] irToolCenters = researchMode.GetIRToolCenters();
 
-            if (depthMap.Length == 0 || shortAbImage.Length == 0) return;
+            if (irToolCenters.Length == 0) return;
 
             // Send Lookup table and depth images for tool tracking
             if (startToolTracking)
             {
-                if (!lutSent && !lutWaitingResend)
+                if (shortDepthTransformData == null)
                 {
-                    // Update LUT
-                    float[] lut = researchMode.GetShortThrowLUT();
-                    DebugConsole.Log("LUT Updated: " + lut.Length.ToString());
-                    if (lut.Length > 0)
-                    {
-                        var lutData = new byte[lut.Length * 4];
-                        Buffer.BlockCopy(lut, 0, lutData, 0, lutData.Length);
-                        reqClient.SendRequest("depth_lut", lutData, SetLutFlag);
-                        lutWaitingResend = true;
-                        Invoke("SetLutWaitingFlag", lutRetryPeriod);
-                    }
+                    shortDepthTransformData = new byte[shortTransformFloat.Length * 4];
                 }
-                else if (lutSent)
-                {
-                    if (shortDepthTransformData == null)
-                    {
-                        shortDepthTransformData = new byte[shortTransformFloat.Length * 4];
-                    }
-                    Buffer.BlockCopy(shortTransformFloat, 0, shortDepthTransformData, 0, shortDepthTransformData.Length);
+                Buffer.BlockCopy(shortTransformFloat, 0, shortDepthTransformData, 0, shortDepthTransformData.Length);
 
-                    NetMQ.NetMQMessage m = new NetMQ.NetMQMessage();
-                    m.Append("depth_frame");
-                    m.Append(depthTs);
-                    m.Append(shortDepthTransformData);
-                    m.Append(depthMap);
-                    m.Append(shortAbImage);
+                byte[] irCentersBytes = new byte[irToolCenters.Length * 4];
+                Buffer.BlockCopy(irToolCenters, 0, irCentersBytes, 0, irCentersBytes.Length);
 
-                    publisher.PublishMultipart(m);
-                }
-            }
+                NetMQ.NetMQMessage m = new NetMQ.NetMQMessage();
+                m.Append("depth_frame");
+                m.Append(depthTs);
+                m.Append(shortDepthTransformData);
+                m.Append(irCentersBytes);
 
-            // Show preview
-            if (startRealtimePreview)
-            {
-                shortDepthMediaTexture.LoadRawTextureData(depthMap);
-                shortDepthMediaTexture.Apply();
-
-                shortAbMediaTexture.LoadRawTextureData(shortAbImage);
-                shortAbMediaTexture.Apply();
+                publisher.PublishMultipart(m);
             }
         }
 #endif
@@ -131,6 +106,11 @@ public class ResearchModeVideoStream : MonoBehaviour
         startToolTracking = true;
 
         if (!sensorStarted) StartSensors();
+    }
+
+    public void StopToolTracking()
+    {
+        startToolTracking = false;
     }
 
     private void StartSensors()
@@ -152,7 +132,9 @@ public class ResearchModeVideoStream : MonoBehaviour
         researchMode.SetReferenceCoordinateSystem(unityWorldOrigin);
         // Start Ahat camera
         researchMode.InitializeDepthSensor();
-        researchMode.StartDepthSensorLoop(false); // false: start depth loop without reconstructing point cloud
+
+        // false: do not reconstruct point cloud; true: start IR sphere filtering
+        researchMode.StartDepthSensorLoop(false, true); 
 #endif
         // Set preview options
         startRealtimePreview = true;

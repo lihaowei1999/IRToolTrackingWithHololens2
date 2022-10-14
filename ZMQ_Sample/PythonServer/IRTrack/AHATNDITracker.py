@@ -315,8 +315,6 @@ class AHAT_NDIToolScene:
                 for p in range(len(self.Tools[toolnum].Points)):
                     xyd_this_tool.append(origin_xydData[ToolSceneFrame.FinalSolution[toolnum][p]])
                 
-
-                
                 xyd_this_tool_filterd=copy.deepcopy(xyd_this_tool)
                 xyz_this_tool=[]
                 for pointnum in range(len(xyd_this_tool)):
@@ -328,7 +326,7 @@ class AHAT_NDIToolScene:
                     xyd_this_tool_filterd[pointnum][2]=d_f
                     # print(np.array(xyd_this_tool)-np.array(xyd_this_tool_filterd))
                     l=math.sqrt(xyd_this_tool_filterd[pointnum][0]**2+xyd_this_tool_filterd[pointnum][1]**2+1)
-                    xyz_this_tool.append(np.array([xyd_this_tool_filterd[pointnum][0]/l*(d_f+5.82),xyd_this_tool_filterd[pointnum][1]/l*(d_f+5.82),(d_f+5.82)/l]))
+                    xyz_this_tool.append(np.array([xyd_this_tool_filterd[pointnum][0]/l*d_f,xyd_this_tool_filterd[pointnum][1]/l*d_f,d_f/l]))
 
                 # tranfiltered,err=UVD_RigidTransform(np.array(xyz_this_tool),self.Tools[toolnum].Points)
                 tranfiltered,err=UVD_RigidTransform(self.Tools[toolnum].Points,np.array(xyz_this_tool))

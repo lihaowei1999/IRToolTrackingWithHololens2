@@ -9,6 +9,8 @@ namespace IRToolTrack
         private string host;
         [SerializeField] private string port;
         private SubListener _listener;
+        private Vector3 targetPosition;
+        private Quaternion targetRotation;
 
         public enum Status
         {
@@ -53,10 +55,16 @@ namespace IRToolTrack
                 float[] transFromWorld = _listener.ToolTrans;
                 float[] quatFromWorld = _listener.ToolQuat;
 
-                transform.position = new Vector3(transFromWorld[0], transFromWorld[1], transFromWorld[2]);
-                transform.rotation = new Quaternion(quatFromWorld[0], quatFromWorld[1], quatFromWorld[2], quatFromWorld[3]);
+                targetPosition = new Vector3(transFromWorld[0], transFromWorld[1], transFromWorld[2]);
+                targetRotation = new Quaternion(quatFromWorld[0], quatFromWorld[1], quatFromWorld[2], quatFromWorld[3]);
 
                 _listener.ToolPoseUpdated = false;
+            }
+
+            if (_subStatus == Status.Active)
+            {
+                transform.position = Vector3.Lerp(transform.position, targetPosition, 0.97f);
+                transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, 0.97f);
             }
         }
     }
