@@ -18,7 +18,7 @@ cd UI_python
 python main.py
 ```
 - The code is tested on Ubuntu 20.04 and window 10. There remains to be some bugs for windows 10, but should run well for ubuntu
- 
+
 ## UI
 ### Connection to Hololens2 Sensors
 - Keep Hololens and PC in one subnet, set the ip of PC as `192.168.1.29`
@@ -26,6 +26,7 @@ python main.py
 - Click `Sensor` on Hololens hand menu
 - Now the Connection is established
 - Click the check box in `Open Sensors` area, the image for the each sensor would be shown in UI
+- If you want to change ip in your own program, please substitue the plugin and script in Unity program with those in folder `./ChangeIP`. I'm sure that this work, but I haven't tested for several months so I do want to merge that into main branch. You can control the ip and ports in the script. Every sensor uses a different port.
 
 ### Data Saving
 - The data saving is only prepared for AHAT camera depth and reflectivity image
